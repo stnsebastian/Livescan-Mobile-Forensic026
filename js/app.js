@@ -165,6 +165,17 @@ class LiveScanApp {
       this.touchlessCam.setZoom(parseFloat(e.target.value));
     });
 
+    // Tap to focus on camera preview
+    const tapFocusHandler = async () => {
+      if (this.activeMode === 'touchless' && this.touchlessCam.isActive) {
+        if (navigator.vibrate) navigator.vibrate(25);
+        await this.touchlessCam.triggerAutofocus();
+        this.showToast('Enfocando lente macro...');
+      }
+    };
+    this.dom.scannerVideo.addEventListener('click', tapFocusHandler);
+    this.dom.touchlessReticle.addEventListener('click', tapFocusHandler);
+
     // Send to match button
     this.dom.btnSendToMatch.addEventListener('click', () => {
       if (!this.currentForensicResult) {
@@ -305,14 +316,33 @@ class LiveScanApp {
 
     if (mode === 'usb') {
       this.setStatus('active', 'Modo USB OTG seleccionado.');
+      this.updateCaptureButton(false, 'INICIAR CAPTURA');
     } else if (mode === 'wifi') {
       this.setStatus('active', 'Modo Wi-Fi RealScan PC seleccionado.');
+      this.updateCaptureButton(false, 'INICIAR CAPTURA');
     } else if (mode === 'touchless') {
-      this.setStatus('active', 'Modo Touchless Macro seleccionado.');
+      this.setStatus('active', 'Modo Touchless: Presione ACTIVAR CÁMARA para enfocar.');
+      this.updateCaptureButton(false, 'ACTIVAR CÁMARA');
     }
   }
 
   async toggleCapture() {
+    if (this.activeMode === 'touchless') {
+      // If camera is currently active, clicking the button TAKES THE SHOT manually!
+      if (this.touchlessCam.isActive) {
+        this.touchlessCam.captureSnapshot();
+        return;
+      } else {
+        // If camera is off, clicking the button starts the live preview
+        this.dom.scannerVideo.style.display = 'block';
+        this.dom.touchlessReticle.classList.add('active');
+        this.isCapturing = true;
+        this.updateCaptureButton(true, '📸 TOMAR FOTO (DISPARAR)');
+        await this.touchlessCam.start();
+        return;
+      }
+    }
+
     if (this.isCapturing) {
       this.stopAllCaptures();
       this.updateCaptureButton(false);
@@ -340,10 +370,6 @@ class LiveScanApp {
           this.isCapturing = false;
           this.updateCaptureButton(false);
         }
-      } else if (this.activeMode === 'touchless') {
-        this.dom.scannerVideo.style.display = 'block';
-        this.dom.touchlessReticle.classList.add('active');
-        await this.touchlessCam.start();
       }
     }
   }
@@ -355,12 +381,17 @@ class LiveScanApp {
     this.touchlessCam.stop();
     this.dom.scannerVideo.style.display = 'none';
     this.dom.touchlessReticle.classList.remove('active');
-    this.updateCaptureButton(false);
+    const defaultLabel = this.activeMode === 'touchless' ? 'ACTIVAR CÁMARA' : 'INICIAR CAPTURA';
+    this.updateCaptureButton(false, defaultLabel);
   }
 
-  updateCaptureButton(isRecording) {
+  updateCaptureButton(isRecording, customLabel = null) {
     this.dom.btnMainCapture.classList.toggle('recording', isRecording);
-    this.dom.captureBtnLabel.textContent = isRecording ? 'DETENER CAPTURA' : 'INICIAR CAPTURA';
+    if (customLabel) {
+      this.dom.captureBtnLabel.textContent = customLabel;
+    } else {
+      this.dom.captureBtnLabel.textContent = isRecording ? 'DETENER CAPTURA' : 'INICIAR CAPTURA';
+    }
   }
 
   handleStatusChange(source, info) {
@@ -406,6 +437,9 @@ class LiveScanApp {
 
     if (navigator.vibrate) navigator.vibrate(60);
     this.stopAllCaptures();
+    if (this.activeMode === 'touchless') {
+      this.updateCaptureButton(false, '🔄 REPETIR / NUEVA TOMA');
+    }
     this.showToast('Huella adquirida y analizada.');
   }
 

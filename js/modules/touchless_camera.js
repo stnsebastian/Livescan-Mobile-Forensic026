@@ -1,7 +1,10 @@
 /**
  * LiveScan Mobile Forensic - Opción 3: Touchless Macro Camera & Flash Module
  * Captures contactless fingerprints using the smartphone's camera + LED torch.
- * Real-time high-pass ridge enhancement, stability analysis, and auto-snap.
+ * - Live Full-Color Viewfinder with Reticle
+ * - Manual Shutter Trigger (User decides when focus is razor-sharp)
+ * - Auto-snapshot disabled to prevent premature blurry captures
+ * - Preserves natural color dactyloscopic texture
  */
 
 export class TouchlessCameraScanner {
@@ -17,10 +20,9 @@ export class TouchlessCameraScanner {
     this.isActive = false;
     this.animFrameId = null;
 
-    // Stability tracker
+    // Stability tracker (visual guidance only, NO auto-snap)
     this.prevFrameData = null;
     this.stableFramesCount = 0;
-    this.stableThreshold = 18; // consecutive steady frames
   }
 
   async start() {
@@ -33,7 +35,7 @@ export class TouchlessCameraScanner {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-          focusMode: { ideal: 'macro' }
+          focusMode: { ideal: 'continuous' }
         }
       };
 
@@ -54,7 +56,7 @@ export class TouchlessCameraScanner {
       this.onStatusChange({
         state: 'ready',
         hasTorch: !!(this.capabilities && this.capabilities.torch),
-        message: 'Cámara lista. Ubique la yema del dedo en la guía oval.'
+        message: 'Alinee el dedo a 6-10 cm. Cuando esté bien enfocado, presione CAPTURAR.'
       });
 
       this._startProcessingLoop();
@@ -95,6 +97,19 @@ export class TouchlessCameraScanner {
     }
   }
 
+  async triggerAutofocus() {
+    if (!this.track) return;
+    try {
+      // Re-trigger continuous autofocus
+      await this.track.applyConstraints({
+        advanced: [{ focusMode: 'continuous' }]
+      });
+      this.onStatusChange({ state: 'focusing', message: 'Reenfocando lente macro...' });
+    } catch (e) {
+      console.warn('Focus constraint error:', e);
+    }
+  }
+
   _startProcessingLoop() {
     const procCanvas = document.createElement('canvas');
     procCanvas.width = 320;
@@ -117,24 +132,18 @@ export class TouchlessCameraScanner {
 
       procCtx.drawImage(this.video, startX, startY, cropW, cropH, 0, 0, 320, 420);
 
-      // Check finger stability
+      // Check finger stability for UI guide ONLY (no auto-snap!)
       const imgData = procCtx.getImageData(0, 0, 320, 420);
       const isSteady = this._checkStability(imgData);
 
       if (isSteady) {
-        this.stableFramesCount++;
-        this.onStatusChange({ state: 'steady', stability: Math.min(100, (this.stableFramesCount / this.stableThreshold) * 100) });
-
-        if (this.stableFramesCount >= this.stableThreshold) {
-          // Auto snapshot!
-          if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-          this.captureSnapshot();
-          this.stableFramesCount = 0;
-          return;
+        this.stableFramesCount = Math.min(30, this.stableFramesCount + 1);
+        if (this.stableFramesCount > 15) {
+          this.onStatusChange({ state: 'steady', stability: 100, message: 'Dedo estable. Presione CAPTURAR cuando esté enfocado.' });
         }
       } else {
         this.stableFramesCount = Math.max(0, this.stableFramesCount - 2);
-        this.onStatusChange({ state: 'moving', stability: 0 });
+        this.onStatusChange({ state: 'moving', stability: 0, message: 'Mueva el dedo suavemente hasta ver las crestas nítidas.' });
       }
 
       this.animFrameId = requestAnimationFrame(loop);
@@ -165,12 +174,12 @@ export class TouchlessCameraScanner {
     }
 
     const avgDiff = sampleCount > 0 ? (diff / sampleCount) : 999;
-    // Low diff indicates steady finger position
-    return avgDiff < 4.2;
+    return avgDiff < 4.5;
   }
 
   /**
-   * Take crisp high-resolution snapshot and apply touchless dactyloscopic enhancement
+   * Take crisp high-resolution snapshot in TRUE NATURAL COLOR
+   * The user triggers this manually when the image is perfectly in focus.
    */
   captureSnapshot() {
     if (!this.video || this.video.readyState < 2) {
@@ -189,57 +198,49 @@ export class TouchlessCameraScanner {
     outCanvas.height = 400;
     const ctx = outCanvas.getContext('2d');
 
-    // Draw raw crop
+    // Draw raw high-resolution color crop directly from video
     ctx.drawImage(this.video, startX, startY, cropW, cropH, 0, 0, 300, 400);
 
-    // Dactyloscopic Contactless Enhancement (Extract dermal ridges from skin photo)
-    this._enhanceTouchlessRidges(outCanvas);
+    // Natural color dactyloscopic enhancement (improves ridge contrast without turning into flat gray)
+    this._enhanceNaturalColorRidges(outCanvas);
 
-    this.onStatusChange({ state: 'captured', message: 'Huella Touchless capturada con éxito.' });
+    this.onStatusChange({ state: 'captured', message: 'Huella Touchless capturada y analizada.' });
     this.onFrameReady(outCanvas);
     return outCanvas;
   }
 
   /**
-   * Contactless dactyloscopic enhancement
-   * Normalizes illumination gradient from LED flash, highlights ridge patterns
+   * Natural color ridge enhancement
+   * Stretches dynamic contrast of the green/red channels while PRESERVING true skin color
    */
-  _enhanceTouchlessRidges(canvas) {
+  _enhanceNaturalColorRidges(canvas) {
     const ctx = canvas.getContext('2d');
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const d = imgData.data;
-    const w = canvas.width;
-    const h = canvas.height;
 
-    // Green channel usually contains highest contrast for epidermal ridges under flash
-    const gray = new Float32Array(w * h);
-    for (let i = 0; i < w * h; i++) {
-      const idx = i * 4;
-      // High green weight to isolate blood vessel / dermal ridge absorption
-      gray[i] = 0.15 * d[idx] + 0.70 * d[idx + 1] + 0.15 * d[idx + 2];
+    // Find min and max luminance for linear contrast stretch
+    let minLum = 255;
+    let maxLum = 0;
+
+    for (let i = 0; i < d.length; i += 4) {
+      const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      if (lum < minLum) minLum = lum;
+      if (lum > maxLum) maxLum = lum;
     }
 
-    // High pass / Laplacian kernel to extract ridge peaks
-    for (let y = 1; y < h - 1; y++) {
-      for (let x = 1; x < w - 1; x++) {
-        const center = gray[y * w + x];
-        const lap = (
-          -1 * gray[(y - 1) * w + x] +
-          -1 * gray[y * w + (x - 1)] +
-           4 * center +
-          -1 * gray[y * w + (x + 1)] +
-          -1 * gray[(y + 1) * w + x]
-        );
+    const range = (maxLum - minLum) || 1;
+    const contrastFactor = 1.25;
 
-        // High contrast mapping
-        const val = Math.max(0, Math.min(255, 128 - lap * 2.5));
-        const idx = (y * w + x) * 4;
-        d[idx] = val;
-        d[idx + 1] = val;
-        d[idx + 2] = val;
-        d[idx + 3] = 255;
+    for (let i = 0; i < d.length; i += 4) {
+      // Natural stretch on all color channels
+      for (let c = 0; c < 3; c++) {
+        let val = ((d[i + c] - minLum) / range) * 255.0;
+        // Moderate S-curve boost for ridges
+        val = (val - 128) * contrastFactor + 128;
+        d[i + c] = Math.max(0, Math.min(255, val));
       }
     }
+
     ctx.putImageData(imgData, 0, 0);
   }
 
@@ -259,7 +260,7 @@ export class TouchlessCameraScanner {
   }
 
   _simulateTouchlessCamera() {
-    this.onStatusChange({ state: 'starting', message: '[SIMULADOR TOUCHLESS] Procesando toma macro con flash LED...' });
+    this.onStatusChange({ state: 'starting', message: '[SIMULADOR TOUCHLESS] Generando captura macro...' });
 
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -268,8 +269,8 @@ export class TouchlessCameraScanner {
         canvas.height = 400;
         const ctx = canvas.getContext('2d');
 
-        // Flesh-tone under flash lighting
-        ctx.fillStyle = '#f9e0db';
+        // Natural flesh tone background
+        ctx.fillStyle = '#eddcd2';
         ctx.fillRect(0, 0, 300, 400);
 
         ctx.save();
@@ -281,15 +282,15 @@ export class TouchlessCameraScanner {
 
         // Fingerprint skin background
         const grad = ctx.createRadialGradient(0, -30, 20, 0, 0, 150);
-        grad.addColorStop(0, '#ffffff'); // Flash reflection hotspot
-        grad.addColorStop(0.5, '#f5d2c8');
-        grad.addColorStop(1, '#df9e8e');
+        grad.addColorStop(0, '#fff0eb');
+        grad.addColorStop(0.5, '#eecac0');
+        grad.addColorStop(1, '#cb9080');
         ctx.fillStyle = grad;
         ctx.fillRect(-150, -200, 300, 400);
 
-        // Ridge texture
-        ctx.lineWidth = 2.2;
-        ctx.strokeStyle = '#6e3c32';
+        // Ridge texture in natural skin ridge tone
+        ctx.lineWidth = 2.4;
+        ctx.strokeStyle = '#5a2e26';
 
         for (let r = 8; r <= 160; r += 7.0) {
           ctx.beginPath();
@@ -307,13 +308,12 @@ export class TouchlessCameraScanner {
 
         ctx.restore();
 
-        // Enhance
-        this._enhanceTouchlessRidges(canvas);
+        this._enhanceNaturalColorRidges(canvas);
 
-        this.onStatusChange({ state: 'captured', message: 'Huella Touchless capturada y mejorada.' });
+        this.onStatusChange({ state: 'captured', message: 'Huella Touchless capturada y analizada.' });
         this.onFrameReady(canvas);
         resolve(canvas);
-      }, 700);
+      }, 500);
     });
   }
 }

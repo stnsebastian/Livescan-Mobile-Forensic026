@@ -3,7 +3,7 @@
  * Enables full offline operation in the field without cellular data or Wi-Fi.
  */
 
-const CACHE_NAME = 'livescan-mobile-v1.7';
+const CACHE_NAME = 'livescan-mobile-v1.8';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

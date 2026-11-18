@@ -40,6 +40,7 @@ class LiveScanApp {
       btnBridgeSettings: document.getElementById('btnBridgeSettings'),
       // Mode buttons
       modeBtns: document.querySelectorAll('.mode-btn'),
+      fingerTypeSelectorBar: document.getElementById('fingerTypeSelectorBar'),
       fingerTypeBtns: document.querySelectorAll('.finger-type-btn'),
       // Viewport & canvases
       mainCanvas: document.getElementById('mainCanvas'),
@@ -334,6 +335,11 @@ class LiveScanApp {
     this.dom.touchlessParamsBar.classList.toggle('active', mode === 'touchless');
     this.dom.touchlessReticle.classList.toggle('active', mode === 'touchless');
     this.dom.scannerVideo.style.display = 'none';
+
+    // Hide the 4 Biometric Scanner modalities when Touchless is active
+    if (this.dom.fingerTypeSelectorBar) {
+      this.dom.fingerTypeSelectorBar.style.display = (mode === 'touchless') ? 'none' : 'flex';
+    }
 
     if (mode === 'usb') {
       this.setStatus('active', 'Modo USB OTG seleccionado.');

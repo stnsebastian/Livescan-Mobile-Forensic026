@@ -784,6 +784,7 @@ class LiveScanApp {
      ========================================================================== */
   loadProbeForMatch(rawCanvas, forensicResult) {
     this.probeResult = forensicResult;
+    this.currentProbeCanvas = rawCanvas;
     const pCtx = this.dom.matchProbeCanvas.getContext('2d');
     pCtx.clearRect(0, 0, 240, 320);
     pCtx.drawImage(rawCanvas, 0, 0, 240, 320);
@@ -793,12 +794,14 @@ class LiveScanApp {
     if (typeof rawCanvasOrUrl === 'string') {
       const img = new Image();
       img.onload = () => {
+        this.currentRefCanvasOrImg = img;
         const rCtx = this.dom.matchRefCanvas.getContext('2d');
         rCtx.clearRect(0, 0, 240, 320);
         rCtx.drawImage(img, 0, 0, 240, 320);
       };
       img.src = rawCanvasOrUrl;
     } else {
+      this.currentRefCanvasOrImg = rawCanvasOrUrl;
       const rCtx = this.dom.matchRefCanvas.getContext('2d');
       rCtx.clearRect(0, 0, 240, 320);
       rCtx.drawImage(rawCanvasOrUrl, 0, 0, 240, 320);
@@ -807,28 +810,39 @@ class LiveScanApp {
   }
 
   async execute1to1Match() {
-    if (!this.probeResult || !this.probeResult.minutiae) {
+    if (!this.probeResult || !this.probeResult.minutiae || this.probeResult.minutiae.length === 0) {
       this.showToast('Primero capture o asigne la huella Evidencia (Probe).');
       return;
     }
 
-    // If reference is not set, load a high-confidence reference pattern for testing
-    if (!this.refResult || !this.refResult.minutiae) {
-      this.showToast('Cargando referencia de control...');
-      // Clone probe minutiae with minor realistic deformation to showcase match
-      const refMinutiae = this.probeResult.minutiae.map(m => ({
-        ...m,
-        x: m.x + (Math.random() * 4 - 2),
-        y: m.y + (Math.random() * 4 - 2),
-        angle: m.angle + (Math.random() * 0.08 - 0.04)
-      }));
-      this.loadReferenceForMatch(this.dom.mainCanvas, refMinutiae);
+    // Reference must be a genuine record loaded from database or file
+    if (!this.refResult || !this.refResult.minutiae || this.refResult.minutiae.length === 0) {
+      const records = await forensicDB.getAllRecords();
+      if (records && records.length > 0) {
+        this.switchTab('tabDatabase');
+        this.showToast('Seleccione un registro de control en la Base de Datos para cotejar.');
+      } else {
+        this.showToast('Guarde registros en la Base de Datos para utilizarlos como Referencia.');
+      }
+      return;
+    }
+
+    // Clean canvases prior to running match visualization
+    if (this.currentProbeCanvas) {
+      const pCtx = this.dom.matchProbeCanvas.getContext('2d');
+      pCtx.clearRect(0, 0, 240, 320);
+      pCtx.drawImage(this.currentProbeCanvas, 0, 0, 240, 320);
+    }
+    if (this.currentRefCanvasOrImg) {
+      const rCtx = this.dom.matchRefCanvas.getContext('2d');
+      rCtx.clearRect(0, 0, 240, 320);
+      rCtx.drawImage(this.currentRefCanvasOrImg, 0, 0, 240, 320);
     }
 
     // Start Neon Laser Sweep Animation
     this.dom.neonLaserSweep.classList.add('running');
     this.dom.matchVerdictBanner.className = 'verdict-banner analyzing';
-    this.dom.matchVerdictBanner.textContent = 'ANALIZANDO PATRÓN CRESTAS CON LUZ NEÓN...';
+    this.dom.matchVerdictBanner.textContent = 'ANALIZANDO CRESTAS PAPILARES DACTILOSCÓPICAS...';
 
     // Sound / Haptic pulses
     if (navigator.vibrate) navigator.vibrate([30, 50, 30, 50]);
@@ -862,12 +876,13 @@ class LiveScanApp {
 
       if (matchResult.isMatch) {
         if (navigator.vibrate) navigator.vibrate([80, 100, 150]);
-        this.showToast('¡COINCIDENCIA IDENTIFICADA!');
+        this.showToast(`¡COINCIDENCIA IDENTIFICADA! (${matchResult.score} puntos)`);
       } else {
         if (navigator.vibrate) navigator.vibrate([150, 50, 150]);
-        this.showToast('Cotejo completado: Sin coincidencia.');
+        this.showToast(`Cotejo completado: ${matchResult.score} puntos homólogos.`);
       }
-    }, 1600);
+    }, 1500);
+  }
   }
 
   /* ==========================================================================

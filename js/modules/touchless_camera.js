@@ -50,13 +50,13 @@ export class TouchlessCameraScanner {
 
       this.isActive = true;
 
-      // Auto enable torch if available
+      // Auto enable torch on startup
       await this.setTorch(true);
 
       this.onStatusChange({
         state: 'ready',
-        hasTorch: !!(this.capabilities && this.capabilities.torch),
-        message: 'Alinee el dedo a 6-10 cm. Cuando esté bien enfocado, presione CAPTURAR.'
+        hasTorch: this.isTorchOn,
+        message: 'Cámara lista. Ubique el dedo a 6-10 cm. Presione TOMAR FOTO cuando esté nítido.'
       });
 
       this._startProcessingLoop();
@@ -67,21 +67,36 @@ export class TouchlessCameraScanner {
   }
 
   async setTorch(enable) {
-    if (!this.track) return;
+    if (!this.track) return false;
     try {
-      if (this.capabilities && this.capabilities.torch) {
-        await this.track.applyConstraints({
-          advanced: [{ torch: !!enable }]
-        });
-        this.isTorchOn = !!enable;
-      }
+      // Standard W3C MediaTrackConstraints torch mode
+      await this.track.applyConstraints({
+        advanced: [{ torch: !!enable }]
+      });
+      this.isTorchOn = !!enable;
+      return this.isTorchOn;
     } catch (e) {
-      console.warn('Torch constraint not supported on this device:', e);
+      console.warn('Torch constraint error on track:', e);
+      try {
+        // Secondary attempt with exact boolean
+        const cap = this.track.getCapabilities ? this.track.getCapabilities() : {};
+        if (cap.torch) {
+          await this.track.applyConstraints({
+            advanced: [{ torch: Boolean(enable) }]
+          });
+          this.isTorchOn = Boolean(enable);
+          return this.isTorchOn;
+        }
+      } catch (e2) {
+        console.warn('Secondary torch attempt failed:', e2);
+      }
+      this.isTorchOn = false;
+      return false;
     }
   }
 
-  toggleTorch() {
-    return this.setTorch(!this.isTorchOn);
+  async toggleTorch() {
+    return await this.setTorch(!this.isTorchOn);
   }
 
   async setZoom(zoomLevel) {

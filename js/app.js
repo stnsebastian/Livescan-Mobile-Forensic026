@@ -155,10 +155,20 @@ class LiveScanApp {
       this.toggleCapture();
     });
 
-    // Touchless controls
+    // Touchless Flash/Torch Control
     this.dom.btnToggleFlash.addEventListener('click', async () => {
+      // If camera is not yet active, activate camera first
+      if (!this.touchlessCam.isActive) {
+        this.dom.scannerVideo.style.display = 'block';
+        this.dom.touchlessReticle.classList.add('active');
+        this.isCapturing = true;
+        this.updateCaptureButton(true, '📸 TOMAR FOTO (DISPARAR)');
+        await this.touchlessCam.start();
+      }
+
       const active = await this.touchlessCam.toggleTorch();
-      this.dom.btnToggleFlash.classList.toggle('active', active);
+      this.dom.btnToggleFlash.classList.toggle('active', !!active);
+      this.showToast(active ? 'Linterna Flash ACTIVADA' : 'Linterna Flash apagada');
     });
 
     this.dom.zoomSlider.addEventListener('input', (e) => {
@@ -339,6 +349,7 @@ class LiveScanApp {
         this.isCapturing = true;
         this.updateCaptureButton(true, '📸 TOMAR FOTO (DISPARAR)');
         await this.touchlessCam.start();
+        this.dom.btnToggleFlash.classList.toggle('active', !!this.touchlessCam.isTorchOn);
         return;
       }
     }
@@ -379,6 +390,7 @@ class LiveScanApp {
     this.usbScanner.stopCapture();
     this.wifiBridge.stopCapture();
     this.touchlessCam.stop();
+    this.dom.btnToggleFlash.classList.remove('active');
     this.dom.scannerVideo.style.display = 'none';
     this.dom.touchlessReticle.classList.remove('active');
     const defaultLabel = this.activeMode === 'touchless' ? 'ACTIVAR CÁMARA' : 'INICIAR CAPTURA';
@@ -546,34 +558,6 @@ class LiveScanApp {
         oCtx.lineTo(m.x + Math.cos(m.angle) * 10, m.y + Math.sin(m.angle) * 10);
         oCtx.stroke();
         oCtx.restore();
-      }
-    } else if (this.activeLayer === 'flow') {
-      ctx.drawImage(this.currentRawCanvas, 0, 0, w, h);
-      // Draw directional field vectors in neon green
-      const blockSize = 10;
-      const blocksX = Math.floor(w / blockSize);
-      const blocksY = Math.floor(h / blockSize);
-
-      oCtx.strokeStyle = '#00ff88';
-      oCtx.lineWidth = 1.5;
-
-      for (let by = 0; by < blocksY; by++) {
-        for (let bx = 0; bx < blocksX; bx++) {
-          const bIdx = by * blocksX + bx;
-          const theta = res.orientationField[bIdx];
-          const coh = res.coherenceField[bIdx];
-
-          if (coh > 0.15) {
-            const cx = bx * blockSize + blockSize / 2;
-            const cy = by * blockSize + blockSize / 2;
-            const len = 5 * Math.min(1.5, coh * 2);
-
-            oCtx.beginPath();
-            oCtx.moveTo(cx - Math.cos(theta) * len, cy - Math.sin(theta) * len);
-            oCtx.lineTo(cx + Math.cos(theta) * len, cy + Math.sin(theta) * len);
-            oCtx.stroke();
-          }
-        }
       }
     }
   }

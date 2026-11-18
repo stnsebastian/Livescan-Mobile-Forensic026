@@ -117,24 +117,27 @@ html, body {
   text-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
 }
 
-/* Officer Sub-Header Banner (Yellow) */
+/* Officer Sub-Header Banner (Yellow) - 100% Single Line */
 .officer-banner-yellow {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   background: rgba(255, 215, 0, 0.08);
   border-bottom: 1px solid rgba(255, 215, 0, 0.28);
-  padding: 4px 10px;
+  padding: 5px 8px;
   font-family: var(--font-mono);
-  font-size: 10.5px;
+  font-size: clamp(9px, 2.8vw, 11px);
   font-weight: 700;
   color: #ffd700;
   text-shadow: 0 0 8px rgba(255, 215, 0, 0.45);
-  letter-spacing: 0.4px;
+  letter-spacing: 0.2px;
   z-index: 45;
   text-transform: uppercase;
   flex-shrink: 0;
+  width: 100%;
 }
 
 .brand-badge {

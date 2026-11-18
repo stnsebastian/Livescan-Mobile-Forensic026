@@ -126,10 +126,26 @@ class LiveScanApp {
 
     // Set initial placeholder on main canvas
     this.drawInitialPlaceholder();
-    this.showToast('LiveScan Mobile Forensic inicializado.');
+    if (!navigator.onLine) {
+      this.setStatus('active', 'Modo Autónomo (Offline)');
+      this.showToast('Modo Autónomo: Operando 100% sin internet.');
+    } else {
+      this.showToast('LiveScan Mobile Forensic inicializado.');
+    }
   }
 
   bindEvents() {
+    // Offline / Autonomous status monitor
+    window.addEventListener('offline', () => {
+      this.setStatus('active', 'Modo Autónomo (Sin Internet)');
+      this.showToast('📶 Modo Autónomo: Operando 100% offline.');
+    });
+
+    window.addEventListener('online', () => {
+      this.setStatus('active', 'Listo');
+      this.showToast('🌐 Conexión de red detectada.');
+    });
+
     // Navigation Tabs
     this.dom.navItems.forEach(item => {
       item.addEventListener('click', () => {

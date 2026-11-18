@@ -1,15 +1,15 @@
 /**
- * LiveScan Mobile Forensic - PWA Service Worker
- * Enables full offline operation in the field without cellular data or Wi-Fi.
+ * LiveScan Mobile Forensic - PWA Service Worker (100% Autónomo / Offline-First)
+ * Garantiza funcionamiento pericial completo en terreno sin señal celular ni internet.
  */
 
-const CACHE_NAME = 'livescan-mobile-v1.8';
-const ASSETS_TO_CACHE = [
+const CACHE_NAME = 'livescan-mobile-v2.0';
+
+// Recursos críticos indispensables para arranque offline
+const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
-  './icons/icon.png',
-  './icons/icon-192.png',
   './icons/icon.svg',
   './css/app.css',
   './js/app.js',
@@ -21,10 +21,29 @@ const ASSETS_TO_CACHE = [
   './js/modules/touchless_camera.js'
 ];
 
+// Recursos opcionales que se cachean si existen
+const OPTIONAL_ASSETS = [
+  './icons/icon.png',
+  './icons/icon-192.png'
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // 1. Cachear obligatoriamente todos los archivos nucleares del sistema
+      await cache.addAll(CORE_ASSETS);
+
+      // 2. Intentar cachear recursos secundarios sin bloquear si alguno falta
+      for (const asset of OPTIONAL_ASSETS) {
+        try {
+          const res = await fetch(asset);
+          if (res && res.status === 200) {
+            await cache.put(asset, res);
+          }
+        } catch (e) {
+          // Si no existe icon.png, no interrumpe la instalación offline
+        }
+      }
     }).then(() => self.skipWaiting())
   );
 });
@@ -44,14 +63,15 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Cache First with Network Fallback
+  // Estrategia Cache-First (Offline por defecto)
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
+
+      // Si no está en caché, intentar red y almacenar copia local automáticamente
       return fetch(event.request).then((networkResponse) => {
-        // Cache new local resources
         if (
           networkResponse &&
           networkResponse.status === 200 &&
@@ -64,7 +84,7 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       }).catch(() => {
-        // Offline fallback if requested resource is navigation
+        // En caso de corte total de red en navegación, servir index.html
         if (event.request.mode === 'navigate') {
           return caches.match('./index.html');
         }

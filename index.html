@@ -29,6 +29,22 @@
           <span id="statusDot" class="status-dot"></span>
           <span id="statusText">Listo</span>
         </div>
+        <button id="btnThemeToggle" class="btn-secondary" style="padding: 6px;" title="Alternar Modo Día / Noche">
+          <svg id="iconThemeSun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg id="iconThemeMoon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
         <button id="btnBridgeSettings" class="btn-secondary" style="padding: 6px;" title="Configurar Puente Wi-Fi">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
@@ -50,48 +66,65 @@
            TAB 1: LIVE FORENSIC CAPTURE & VIEWER
            ======================================================== -->
       <section id="tabCapture" class="tab-view active">
-        <!-- 3-Mode Selector Pills -->
-        <div class="mode-selector">
-          <button id="modeUsbBtn" class="mode-btn active" data-mode="usb">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2v20M12 2l4 4M12 2L8 6"></path>
-              <circle cx="8" cy="18" r="2"></circle>
-              <rect x="14" y="16" width="4" height="4"></rect>
-            </svg>
-            1. USB OTG
-          </button>
-          <button id="modeWifiBtn" class="mode-btn" data-mode="wifi">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
-              <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
-              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
-              <circle cx="12" cy="20" r="1"></circle>
-            </svg>
-            2. Wi-Fi Bridge
-          </button>
-          <button id="modeTouchlessBtn" class="mode-btn" data-mode="touchless">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
-            3. Touchless
-          </button>
-        </div>
+        <!-- Tactical Compact Dual Dropdowns Bar (Origen y Modalidad) -->
+        <div class="tactical-dropdowns-bar">
+          <!-- Dropdown 1: Origen de Captura (Cian Neón) -->
+          <div class="custom-dropdown dropdown-cyan" id="dropdownOrigin">
+            <button class="dropdown-trigger" id="triggerOrigin" type="button" aria-expanded="false" title="Seleccionar Origen de Captura">
+              <span class="trigger-label">
+                <span class="trigger-icon" id="originIcon">🔌</span>
+                <span id="originText">1. USB OTG</span>
+              </span>
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="dropdown-menu" id="menuOrigin">
+              <div class="dropdown-item active" data-mode="usb">
+                <span class="item-icon">🔌</span>
+                <span>1. USB OTG LiveScan</span>
+              </div>
+              <div class="dropdown-item" data-mode="wifi">
+                <span class="item-icon">📡</span>
+                <span>2. Wi-Fi Bridge PC</span>
+              </div>
+              <div class="dropdown-item" data-mode="touchless">
+                <span class="item-icon">📷</span>
+                <span>3. Touchless Macro</span>
+              </div>
+            </div>
+          </div>
 
-        <!-- Barra de Selección de Tipo de Huella Biometría Forense -->
-        <div id="fingerTypeSelectorBar" class="finger-type-selector-bar">
-          <button class="finger-type-btn active" data-type="ROLLED">
-            <span class="type-icon">🌀</span> HUELLA RODADA (1 AL 10)
-          </button>
-          <button class="finger-type-btn" data-type="FLAT_SINGLE">
-            <span class="type-icon">👆</span> PLANA INDIVIDUAL
-          </button>
-          <button class="finger-type-btn" data-type="SLAP_3_4">
-            <span class="type-icon">🖐</span> SIMULTÁNEAS ÍNDICE-MEDIO-ANULAR
-          </button>
-          <button class="finger-type-btn" data-type="DUAL_THUMBS">
-            <span class="type-icon">👍👍</span> DOS PULGARES SIMULTÁNEOS
-          </button>
+          <!-- Dropdown 2: Modalidad Biometría Forense (Ámbar / Oro) -->
+          <div class="custom-dropdown dropdown-amber" id="dropdownModality">
+            <button class="dropdown-trigger" id="triggerModality" type="button" aria-expanded="false" title="Seleccionar Modalidad Biométrica">
+              <span class="trigger-label">
+                <span class="trigger-icon" id="modalityIcon">🌀</span>
+                <span id="modalityText">Huella Rodada (1-10)</span>
+              </span>
+              <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <div class="dropdown-menu" id="menuModality">
+              <div class="dropdown-item active" data-type="ROLLED">
+                <span class="item-icon">🌀</span>
+                <span>Huella Rodada (1 al 10)</span>
+              </div>
+              <div class="dropdown-item" data-type="FLAT_SINGLE">
+                <span class="item-icon">👆</span>
+                <span>Plana Individual</span>
+              </div>
+              <div class="dropdown-item" data-type="SLAP_3_4">
+                <span class="item-icon">🖐</span>
+                <span>Simultáneas 3/4 Dedos</span>
+              </div>
+              <div class="dropdown-item" data-type="DUAL_THUMBS">
+                <span class="item-icon">👍👍</span>
+                <span>Dos Pulgares Simultáneos</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Vertical Forensic Viewport -->

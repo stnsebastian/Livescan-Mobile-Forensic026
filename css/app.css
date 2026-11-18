@@ -33,6 +33,239 @@
   --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
+/* ==========================================================================
+   Modo Día (Light Theme - Estilo Software Desarrollo S.S. / Sitio del Suceso)
+   ========================================================================== */
+[data-theme="light"] {
+  --bg-primary: #eef2f6;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #e2e8f0;
+  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-glass: rgba(255, 255, 255, 0.88);
+
+  --accent-cyan: #0284c7;
+  --accent-cyan-glow: rgba(2, 132, 199, 0.25);
+  --accent-green: #059669;
+  --accent-green-glow: rgba(5, 150, 105, 0.25);
+  --accent-amber: #d97706;
+  --accent-amber-glow: rgba(217, 119, 6, 0.25);
+  --accent-red: #dc2626;
+  --accent-red-glow: rgba(220, 38, 38, 0.25);
+  --accent-purple: #7c3aed;
+
+  --text-main: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-color: rgba(2, 132, 199, 0.22);
+  --border-bright: rgba(2, 132, 199, 0.55);
+}
+
+[data-theme="light"] #app-container {
+  background: radial-gradient(circle at 50% 10%, rgba(2, 132, 199, 0.08) 0%, transparent 60%),
+              linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+[data-theme="light"] .top-header {
+  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid #cbd5e1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .brand-title {
+  color: #0f172a;
+}
+
+[data-theme="light"] .brand-badge {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0284c7;
+  border-color: rgba(2, 132, 199, 0.35);
+}
+
+[data-theme="light"] .header-status-indicator {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+[data-theme="light"] .officer-banner-yellow {
+  background: #fef3c7;
+  border-bottom: 1px solid #f59e0b;
+  color: #92400e;
+  text-shadow: none;
+}
+
+[data-theme="light"] .mode-selector {
+  background: #f1f5f9;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+[data-theme="light"] .mode-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .mode-btn.active {
+  background: rgba(2, 132, 199, 0.12);
+  border-color: #0284c7;
+  color: #0284c7;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.2);
+}
+
+[data-theme="light"] .tactical-dropdowns-bar {
+  background: #f8fafc;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+[data-theme="light"] .dropdown-cyan .dropdown-trigger {
+  background: #f0f9ff;
+  border: 1px solid #0284c7;
+  color: #0284c7;
+  box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+}
+
+[data-theme="light"] .dropdown-cyan .dropdown-menu {
+  background: #ffffff;
+  border-color: #0284c7;
+  box-shadow: 0 10px 25px rgba(2, 132, 199, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .dropdown-cyan .dropdown-item.active {
+  background: #e0f2fe;
+  color: #0284c7;
+  border-left: 3px solid #0284c7;
+}
+
+[data-theme="light"] .dropdown-amber .dropdown-trigger {
+  background: #fffbeb;
+  border: 1px solid #d97706;
+  color: #b45309;
+  box-shadow: 0 1px 4px rgba(217, 119, 6, 0.12);
+}
+
+[data-theme="light"] .dropdown-amber .dropdown-menu {
+  background: #ffffff;
+  border-color: #d97706;
+  box-shadow: 0 10px 25px rgba(217, 119, 6, 0.18), 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .dropdown-amber .dropdown-item.active {
+  background: #fef3c7;
+  color: #b45309;
+  border-left: 3px solid #d97706;
+}
+
+[data-theme="light"] .dropdown-item {
+  color: #334155;
+}
+
+[data-theme="light"] .dropdown-item:active {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .viewport-panel {
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .canvas-wrapper {
+  background-image: 
+    linear-gradient(rgba(2, 132, 199, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(2, 132, 199, 0.08) 1px, transparent 1px);
+}
+
+[data-theme="light"] #mainCanvas,
+[data-theme="light"] #overlayCanvas {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .hud-pill {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: #cbd5e1;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .layer-controls {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .layer-btn {
+  color: #475569;
+}
+
+[data-theme="light"] .layer-btn.active {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+[data-theme="light"] .capture-controls {
+  background: #ffffff;
+  border-top: 1px solid #cbd5e1;
+}
+
+[data-theme="light"] .touchless-params {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .btn-icon-toggle {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] .btn-secondary {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+[data-theme="light"] .btn-secondary:active {
+  background: #e2e8f0;
+  border-color: #0284c7;
+}
+
+[data-theme="light"] .match-box {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .match-header-card,
+[data-theme="light"] .match-result-card,
+[data-theme="light"] .record-card,
+[data-theme="light"] .db-search-bar {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .match-stat-cell {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid #cbd5e1;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .modal-bottom-sheet {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .form-input,
+[data-theme="light"] .form-select {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -222,14 +455,172 @@ html, body {
    View 1: Capture & Forensic Live Viewer
    ========================================================================== */
 
-/* Mode Selector Pills */
-.mode-selector {
+/* Mode Selector Pills (Legacy) & Tactical Dual Dropdowns Bar */
+.tactical-dropdowns-bar {
   display: flex;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(10, 16, 26, 0.85);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 35;
+  position: relative;
+}
+
+.custom-dropdown {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+}
+
+.dropdown-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  user-select: none;
+}
+
+.trigger-label {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  background: rgba(10, 15, 25, 0.7);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  z-index: 20;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trigger-label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.custom-dropdown.open .chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* --- COLOR 1: CIAN NEÓN (Origen de Captura / Conexión) --- */
+.dropdown-cyan .dropdown-trigger {
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+}
+
+.dropdown-cyan .chevron-icon {
+  stroke: var(--accent-cyan);
+}
+
+.dropdown-cyan .dropdown-menu {
+  border-color: rgba(0, 229, 255, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(0, 229, 255, 0.15);
+}
+
+.dropdown-cyan .dropdown-item.active {
+  background: rgba(0, 229, 255, 0.18);
+  color: var(--accent-cyan);
+  border-left: 3px solid var(--accent-cyan);
+}
+
+/* --- COLOR 2: ÁMBAR / ORO (Modalidad Biometría / Huella) --- */
+.dropdown-amber .dropdown-trigger {
+  background: rgba(255, 183, 0, 0.12);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  box-shadow: 0 0 10px rgba(255, 183, 0, 0.2);
+}
+
+.dropdown-amber .chevron-icon {
+  stroke: var(--accent-amber);
+}
+
+.dropdown-amber .dropdown-menu {
+  border-color: rgba(255, 183, 0, 0.35);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(255, 183, 0, 0.15);
+}
+
+.dropdown-amber .dropdown-item.active {
+  background: rgba(255, 183, 0, 0.18);
+  color: var(--accent-amber);
+  border-left: 3px solid var(--accent-amber);
+}
+
+/* Menú Flotante */
+.dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 190px;
+  background: #0d1524;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 4px;
+  display: none;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 70;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.8);
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.custom-dropdown.open .dropdown-menu {
+  display: flex;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dropdown-item:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dropdown-item .item-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.mode-selector {
+  display: none;
+}
+
+.finger-type-selector-bar {
+  display: none;
 }
 
 .mode-btn {

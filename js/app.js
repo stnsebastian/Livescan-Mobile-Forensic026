@@ -16,6 +16,7 @@ class LiveScanApp {
     this.activeMode = 'usb'; // 'usb' | 'wifi' | 'touchless'
     this.activeLayer = 'raw'; // 'raw' | 'binary' | 'skeleton' | 'minutiae'
     this.currentCaptureType = 'ROLLED'; // 'ROLLED' | 'FLAT_SINGLE' | 'SLAP_3_4' | 'DUAL_THUMBS'
+    this.currentTheme = localStorage.getItem('livescan_theme') || 'dark';
     this.isCapturing = false;
 
     this.currentRawCanvas = null;
@@ -37,11 +38,21 @@ class LiveScanApp {
       // Header & Status
       statusDot: document.getElementById('statusDot'),
       statusText: document.getElementById('statusText'),
+      btnThemeToggle: document.getElementById('btnThemeToggle'),
+      iconThemeSun: document.getElementById('iconThemeSun'),
+      iconThemeMoon: document.getElementById('iconThemeMoon'),
       btnBridgeSettings: document.getElementById('btnBridgeSettings'),
-      // Mode buttons
-      modeBtns: document.querySelectorAll('.mode-btn'),
-      fingerTypeSelectorBar: document.getElementById('fingerTypeSelectorBar'),
-      fingerTypeBtns: document.querySelectorAll('.finger-type-btn'),
+      // Mode & Modality Dropdowns
+      dropdownOrigin: document.getElementById('dropdownOrigin'),
+      triggerOrigin: document.getElementById('triggerOrigin'),
+      originIcon: document.getElementById('originIcon'),
+      originText: document.getElementById('originText'),
+      originItems: document.querySelectorAll('#menuOrigin .dropdown-item'),
+      dropdownModality: document.getElementById('dropdownModality'),
+      triggerModality: document.getElementById('triggerModality'),
+      modalityIcon: document.getElementById('modalityIcon'),
+      modalityText: document.getElementById('modalityText'),
+      modalityItems: document.querySelectorAll('#menuModality .dropdown-item'),
       // Viewport & canvases
       mainCanvas: document.getElementById('mainCanvas'),
       overlayCanvas: document.getElementById('overlayCanvas'),
@@ -119,6 +130,7 @@ class LiveScanApp {
   }
 
   async init() {
+    this.applyTheme(this.currentTheme);
     this.bindEvents();
     await forensicDB.init();
     this.renderDatabaseList();
@@ -146,6 +158,13 @@ class LiveScanApp {
       this.showToast('🌐 Conexión de red detectada.');
     });
 
+    // Theme Toggle (Modo Día / Modo Noche)
+    if (this.dom.btnThemeToggle) {
+      this.dom.btnThemeToggle.addEventListener('click', () => {
+        this.toggleTheme();
+      });
+    }
+
     // Navigation Tabs
     this.dom.navItems.forEach(item => {
       item.addEventListener('click', () => {
@@ -154,19 +173,50 @@ class LiveScanApp {
       });
     });
 
-    // Capture Mode Selector
-    this.dom.modeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const mode = btn.getAttribute('data-mode');
+    // Dropdown Toggles
+    if (this.dom.triggerOrigin) {
+      this.dom.triggerOrigin.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.dom.dropdownModality?.classList.remove('open');
+        this.dom.dropdownOrigin.classList.toggle('open');
+      });
+    }
+
+    if (this.dom.triggerModality) {
+      this.dom.triggerModality.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.dom.dropdownOrigin?.classList.remove('open');
+        this.dom.dropdownModality.classList.toggle('open');
+      });
+    }
+
+    // Close Dropdowns on Click Outside
+    document.addEventListener('click', (e) => {
+      if (this.dom.dropdownOrigin && !this.dom.dropdownOrigin.contains(e.target)) {
+        this.dom.dropdownOrigin.classList.remove('open');
+      }
+      if (this.dom.dropdownModality && !this.dom.dropdownModality.contains(e.target)) {
+        this.dom.dropdownModality.classList.remove('open');
+      }
+    });
+
+    // Capture Mode Selector (Origin dropdown items)
+    this.dom.originItems?.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const mode = item.getAttribute('data-mode');
         this.switchMode(mode);
+        this.dom.dropdownOrigin?.classList.remove('open');
       });
     });
 
-    // Biometric Fingerprint Type Selector (Rodada, Plana, Simultáneas, Pulgares)
-    this.dom.fingerTypeBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const type = btn.getAttribute('data-type');
+    // Biometric Fingerprint Type Selector (Modality dropdown items)
+    this.dom.modalityItems?.forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const type = item.getAttribute('data-type');
         this.setCaptureType(type);
+        this.dom.dropdownModality?.classList.remove('open');
       });
     });
 
@@ -343,8 +393,19 @@ class LiveScanApp {
     }
 
     this.activeMode = mode;
-    this.dom.modeBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+
+    // Update origin dropdown trigger & active item
+    const originMap = {
+      'usb': { icon: '🔌', text: '1. USB OTG' },
+      'wifi': { icon: '📡', text: '2. Wi-Fi Bridge' },
+      'touchless': { icon: '📷', text: '3. Touchless' }
+    };
+    if (originMap[mode]) {
+      if (this.dom.originIcon) this.dom.originIcon.textContent = originMap[mode].icon;
+      if (this.dom.originText) this.dom.originText.textContent = originMap[mode].text;
+    }
+    this.dom.originItems?.forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-mode') === mode);
     });
 
     // Reset touchless specific UI
@@ -352,9 +413,9 @@ class LiveScanApp {
     this.dom.touchlessReticle.classList.toggle('active', mode === 'touchless');
     this.dom.scannerVideo.style.display = 'none';
 
-    // Hide the 4 Biometric Scanner modalities when Touchless is active
-    if (this.dom.fingerTypeSelectorBar) {
-      this.dom.fingerTypeSelectorBar.style.display = (mode === 'touchless') ? 'none' : 'flex';
+    // Hide the 4 Biometric Scanner modalities dropdown when Touchless is active, show on USB / Wi-Fi
+    if (this.dom.dropdownModality) {
+      this.dom.dropdownModality.style.display = (mode === 'touchless') ? 'none' : 'block';
     }
 
     if (mode === 'usb') {
@@ -371,8 +432,22 @@ class LiveScanApp {
 
   setCaptureType(type) {
     this.currentCaptureType = type;
-    this.dom.fingerTypeBtns.forEach(btn => {
-      btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+
+    // Update modality dropdown trigger & active item
+    const typeMeta = {
+      'ROLLED': { icon: '🌀', text: 'Huella Rodada (1-10)' },
+      'FLAT_SINGLE': { icon: '👆', text: 'Plana Individual' },
+      'SLAP_3_4': { icon: '🖐', text: 'Simultáneas 3/4' },
+      'DUAL_THUMBS': { icon: '👍👍', text: 'Dos Pulgares' }
+    };
+
+    if (typeMeta[type]) {
+      if (this.dom.modalityIcon) this.dom.modalityIcon.textContent = typeMeta[type].icon;
+      if (this.dom.modalityText) this.dom.modalityText.textContent = typeMeta[type].text;
+    }
+
+    this.dom.modalityItems?.forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-type') === type);
     });
 
     const typeLabels = {
@@ -641,24 +716,65 @@ class LiveScanApp {
     }
   }
 
+  applyTheme(theme) {
+    this.currentTheme = theme;
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('livescan_theme', theme);
+
+    // Update browser status bar color
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', theme === 'light' ? '#f8fafc' : '#070a10');
+    }
+
+    if (this.dom.iconThemeSun && this.dom.iconThemeMoon) {
+      if (theme === 'light') {
+        this.dom.iconThemeSun.style.display = 'block';
+        this.dom.iconThemeMoon.style.display = 'none';
+        this.dom.btnThemeToggle.setAttribute('title', 'Cambiar a Modo Noche');
+      } else {
+        this.dom.iconThemeSun.style.display = 'none';
+        this.dom.iconThemeMoon.style.display = 'block';
+        this.dom.btnThemeToggle.setAttribute('title', 'Cambiar a Modo Día');
+      }
+    }
+
+    // Re-render placeholder or active layer for correct background
+    if (!this.currentRawCanvas) {
+      this.drawInitialPlaceholder();
+    } else {
+      this.renderCurrentLayer();
+    }
+  }
+
+  toggleTheme() {
+    const newTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
+    this.applyTheme(newTheme);
+    if (navigator.vibrate) navigator.vibrate(30);
+    this.showToast(newTheme === 'light' ? '☀️ Modo Día Activado' : '🌙 Modo Noche Activado');
+  }
+
   drawInitialPlaceholder() {
     const ctx = this.dom.mainCanvas.getContext('2d');
     const w = this.dom.mainCanvas.width;
     const h = this.dom.mainCanvas.height;
 
-    ctx.fillStyle = '#060a12';
+    const isLight = document.body.getAttribute('data-theme') === 'light';
+
+    ctx.fillStyle = isLight ? '#f8fafc' : '#060a12';
     ctx.fillRect(0, 0, w, h);
 
-    ctx.strokeStyle = 'rgba(0, 229, 255, 0.2)';
+    ctx.strokeStyle = isLight ? 'rgba(2, 132, 199, 0.35)' : 'rgba(0, 229, 255, 0.2)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.ellipse(w / 2, h / 2, 70, 110, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(0, 229, 255, 0.4)';
-    ctx.font = '11px sans-serif';
+    ctx.fillStyle = isLight ? '#0284c7' : 'rgba(0, 229, 255, 0.4)';
+    ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('DISPOSITIVO LISTO', w / 2, h / 2 - 8);
+    ctx.fillStyle = isLight ? '#64748b' : 'rgba(255, 255, 255, 0.4)';
     ctx.font = '9px monospace';
     ctx.fillText('SELECCIONE MODO Y PRESIONE CAPTURA', w / 2, h / 2 + 12);
   }

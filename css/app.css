@@ -261,6 +261,58 @@ html, body {
   box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
 }
 
+/* Biometric Capture Type Selector Bar (Scrollable) */
+.finger-type-selector-bar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(8, 13, 22, 0.95);
+  border-bottom: 1px solid var(--border-color);
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  z-index: 18;
+}
+
+.finger-type-selector-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.finger-type-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #cbd5e1;
+  background: rgba(18, 26, 42, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.finger-type-btn .type-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.finger-type-btn:active {
+  transform: scale(0.97);
+}
+
+.finger-type-btn.active {
+  color: var(--accent-cyan);
+  background: rgba(0, 229, 255, 0.14);
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+}
+
 /* Vertical Forensic Viewport */
 .viewport-panel {
   flex: 1;

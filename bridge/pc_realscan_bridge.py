@@ -59,11 +59,12 @@ async def handler(websocket):
                 logging.info(f"Comando recibido de la app móvil: {msg_type}")
 
                 if msg_type == "TRIGGER_CAPTURE":
-                    logging.info("Iniciando adquisición dactilar en el escáner RealScan de la PC...")
+                    mode = data.get("mode", "ROLLED")
+                    logging.info(f"Iniciando adquisición en RealScan PC para modo: {mode}...")
                     await websocket.send(json.dumps({
                         "type": "STATUS",
                         "state": "capturing",
-                        "message": "Adquiriendo huella plana de 500 DPI..."
+                        "message": f"Adquiriendo {mode} de 500 DPI en escáner RealScan..."
                     }))
                     
                     # Simulación o llamada al SDK C/DLL de RealScan (RealScan_StartCaptureFlat)

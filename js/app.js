@@ -14,7 +14,8 @@ import { TouchlessCameraScanner } from './modules/touchless_camera.js';
 class LiveScanApp {
   constructor() {
     this.activeMode = 'usb'; // 'usb' | 'wifi' | 'touchless'
-    this.activeLayer = 'raw'; // 'raw' | 'binary' | 'skeleton' | 'minutiae' | 'flow'
+    this.activeLayer = 'raw'; // 'raw' | 'binary' | 'skeleton' | 'minutiae'
+    this.currentCaptureType = 'ROLLED'; // 'ROLLED' | 'FLAT_SINGLE' | 'SLAP_3_4' | 'DUAL_THUMBS'
     this.isCapturing = false;
 
     this.currentRawCanvas = null;
@@ -39,6 +40,7 @@ class LiveScanApp {
       btnBridgeSettings: document.getElementById('btnBridgeSettings'),
       // Mode buttons
       modeBtns: document.querySelectorAll('.mode-btn'),
+      fingerTypeBtns: document.querySelectorAll('.finger-type-btn'),
       // Viewport & canvases
       mainCanvas: document.getElementById('mainCanvas'),
       overlayCanvas: document.getElementById('overlayCanvas'),
@@ -82,6 +84,7 @@ class LiveScanApp {
       btnConfirmSaveRecord: document.getElementById('btnConfirmSaveRecord'),
       inputFullName: document.getElementById('inputFullName'),
       inputDocId: document.getElementById('inputDocId'),
+      inputCaptureTypeSelect: document.getElementById('inputCaptureTypeSelect'),
       inputFingerSelect: document.getElementById('inputFingerSelect'),
       inputCaseNumber: document.getElementById('inputCaseNumber'),
       inputOfficer: document.getElementById('inputOfficer'),
@@ -139,6 +142,14 @@ class LiveScanApp {
       btn.addEventListener('click', () => {
         const mode = btn.getAttribute('data-mode');
         this.switchMode(mode);
+      });
+    });
+
+    // Biometric Fingerprint Type Selector (Rodada, Plana, Simultáneas, Pulgares)
+    this.dom.fingerTypeBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const type = btn.getAttribute('data-type');
+        this.setCaptureType(type);
       });
     });
 
@@ -336,6 +347,52 @@ class LiveScanApp {
     }
   }
 
+  setCaptureType(type) {
+    this.currentCaptureType = type;
+    this.dom.fingerTypeBtns.forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+    });
+
+    const typeLabels = {
+      'ROLLED': 'Huella Rodada (1 al 10)',
+      'FLAT_SINGLE': 'Plana Individual',
+      'SLAP_3_4': 'Simultáneas Índice-Medio-Anular',
+      'DUAL_THUMBS': 'Dos Pulgares Simultáneos'
+    };
+    const label = typeLabels[type] || type;
+
+    // Sync save modal dropdown
+    if (this.dom.inputCaptureTypeSelect) {
+      this.dom.inputCaptureTypeSelect.value = label;
+    }
+
+    // Dynamic Reticle adjustment for touchless / live view
+    if (type === 'SLAP_3_4') {
+      this.dom.touchlessReticle.style.width = '280px';
+      this.dom.touchlessReticle.style.height = '240px';
+      this.dom.touchlessReticle.style.borderRadius = '32px';
+      this.dom.reticleLabel.textContent = 'ALINEAR 3 O 4 DEDOS';
+    } else if (type === 'DUAL_THUMBS') {
+      this.dom.touchlessReticle.style.width = '260px';
+      this.dom.touchlessReticle.style.height = '260px';
+      this.dom.touchlessReticle.style.borderRadius = '40px';
+      this.dom.reticleLabel.textContent = 'ALINEAR DOS PULGARES';
+    } else if (type === 'ROLLED') {
+      this.dom.touchlessReticle.style.width = '250px';
+      this.dom.touchlessReticle.style.height = '320px';
+      this.dom.touchlessReticle.style.borderRadius = '110px 110px 80px 80px';
+      this.dom.reticleLabel.textContent = 'RODAR DE UÑA A UÑA';
+    } else {
+      this.dom.touchlessReticle.style.width = '220px';
+      this.dom.touchlessReticle.style.height = '300px';
+      this.dom.touchlessReticle.style.borderRadius = '120px 120px 90px 90px';
+      this.dom.reticleLabel.textContent = 'ALINEAR DEDO PLANO';
+    }
+
+    if (navigator.vibrate) navigator.vibrate(30);
+    this.showToast(`Modo: ${label}`);
+  }
+
   async toggleCapture() {
     if (this.activeMode === 'touchless') {
       // If camera is currently active, clicking the button TAKES THE SHOT manually!
@@ -366,7 +423,7 @@ class LiveScanApp {
           if (!this.usbScanner.isConnected) {
             await this.usbScanner.connect();
           }
-          await this.usbScanner.startCapture();
+          await this.usbScanner.startCapture(this.currentCaptureType);
         } catch (e) {
           this.isCapturing = false;
           this.updateCaptureButton(false);
@@ -376,7 +433,7 @@ class LiveScanApp {
           if (!this.wifiBridge.isConnected) {
             await this.wifiBridge.connect();
           }
-          this.wifiBridge.startCapture();
+          this.wifiBridge.startCapture(this.currentCaptureType);
         } catch (e) {
           this.isCapturing = false;
           this.updateCaptureButton(false);
@@ -683,6 +740,7 @@ class LiveScanApp {
 
     const fullName = this.dom.inputFullName.value.trim() || 'Desconocido';
     const docId = this.dom.inputDocId.value.trim() || 'S/N';
+    const captureType = this.dom.inputCaptureTypeSelect ? this.dom.inputCaptureTypeSelect.value : 'Huella Rodada (1 al 10)';
     const finger = this.dom.inputFingerSelect.value;
     const caseNumber = this.dom.inputCaseNumber.value.trim() || 'EXP-ACTUAL';
     const officer = this.dom.inputOfficer.value.trim() || 'Perito Forense Jorge PINO A. / Bicrim San Javier.';
@@ -692,6 +750,7 @@ class LiveScanApp {
     const record = {
       fullName,
       docId,
+      captureType,
       finger,
       caseNumber,
       officer,
@@ -733,7 +792,7 @@ class LiveScanApp {
         <img class="record-thumb" src="${r.rawImage || ''}" alt="Huella">
         <div class="record-info">
           <div class="record-name">${r.fullName} (${r.docId})</div>
-          <div class="record-meta">${r.finger} • Causa: ${r.caseNumber}</div>
+          <div class="record-meta">${r.captureType || 'Huella'} • ${r.finger} • Causa: ${r.caseNumber}</div>
           <div class="record-meta" style="color: var(--accent-cyan);">
             NFIQ ${r.nfiqScore} • ${r.minutiae ? r.minutiae.length : 0} Minucias • ${r.source}
           </div>

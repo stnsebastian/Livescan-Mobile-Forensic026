@@ -92,14 +92,14 @@ export class WebUSBScanner {
     }
   }
 
-  async startCapture() {
+  async startCapture(captureType = 'ROLLED') {
     if (!this.isConnected || !this.device) {
       // Launch simulated capture if physical device is not claimed
-      return this._simulateOTGCapture();
+      return this._simulateOTGCapture(captureType);
     }
 
     this.isCapturing = true;
-    this.onStatusChange({ state: 'capturing', message: 'Coloque el dedo sobre el prisma del escáner USB...' });
+    this.onStatusChange({ state: 'capturing', message: `Coloque el dedo sobre el prisma del escáner USB (${captureType})...` });
 
     try {
       // Loop reading bulk packets
@@ -120,7 +120,7 @@ export class WebUSBScanner {
       readLoop();
     } catch (err) {
       console.error('Error starting USB capture:', err);
-      this._simulateOTGCapture();
+      this._simulateOTGCapture(captureType);
     }
   }
 
@@ -168,21 +168,28 @@ export class WebUSBScanner {
   /**
    * High-fidelity realistic biometric sensor simulator for demonstration/testing
    */
-  _simulateOTGCapture() {
+  _simulateOTGCapture(captureType = 'ROLLED') {
     this.isCapturing = true;
-    this.onStatusChange({ state: 'capturing', message: '[SIMULADOR USB OTG] Adquiriendo huella del sensor...' });
+    const typeNames = {
+      'ROLLED': 'Huella Rodada (1 al 10)',
+      'FLAT_SINGLE': 'Plana Individual',
+      'SLAP_3_4': 'Simultáneas Índice-Medio-Anular',
+      'DUAL_THUMBS': 'Dos Pulgares Simultáneos'
+    };
+    const title = typeNames[captureType] || captureType;
+    this.onStatusChange({ state: 'capturing', message: `[ESCÁNER USB] Capturando: ${title}...` });
 
     return new Promise((resolve) => {
       let progress = 0;
       const interval = setInterval(() => {
         progress += 0.2;
-        const canvas = this._generateProceduralFingerprint(progress);
+        const canvas = this._generateProceduralFingerprint(progress, captureType);
         this.onFrameReceived(canvas);
 
         if (progress >= 1.0) {
           clearInterval(interval);
           this.isCapturing = false;
-          this.onStatusChange({ state: 'complete', message: 'Huella capturada por USB OTG con éxito.' });
+          this.onStatusChange({ state: 'complete', message: `Captura ${title} completada con éxito.` });
           resolve(canvas);
         }
       }, 150);
@@ -190,9 +197,9 @@ export class WebUSBScanner {
   }
 
   /**
-   * Procedural forensic fingerprint generator for testing
+   * Procedural forensic fingerprint generator tailored for the selected capture type
    */
-  _generateProceduralFingerprint(progress = 1.0) {
+  _generateProceduralFingerprint(progress = 1.0, captureType = 'ROLLED') {
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 400;
@@ -202,56 +209,90 @@ export class WebUSBScanner {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, 300, 400);
 
-    const cx = 150;
-    const cy = 205;
-    const totalRings = 24;
-
     ctx.save();
-    ctx.translate(cx, cy);
 
-    // Oval fingerprint mask
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 95 * progress, 140 * progress, 0, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.fillStyle = '#f8f8f8';
-    ctx.fillRect(-150, -200, 300, 400);
-
-    ctx.lineWidth = 2.4;
-    ctx.strokeStyle = '#252525';
-
-    for (let r = 5; r <= totalRings * 7; r += 7) {
+    if (captureType === 'SLAP_3_4') {
+      // 3 Adjacent Fingers (Índice, Medio, Anular)
+      const fingerOffsets = [-65, 0, 65];
+      fingerOffsets.forEach((ox, idx) => {
+        ctx.save();
+        ctx.translate(150 + ox, 205 + (idx === 1 ? -10 : 10));
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 26 * progress, 80 * progress, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = '#f8f8f8';
+        ctx.fillRect(-40, -100, 80, 200);
+        ctx.lineWidth = 2.0;
+        ctx.strokeStyle = '#252525';
+        for (let r = 4; r <= 90; r += 6) {
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+    } else if (captureType === 'DUAL_THUMBS') {
+      // Two Flat Thumbs side by side
+      const thumbOffsets = [-50, 50];
+      thumbOffsets.forEach(ox => {
+        ctx.save();
+        ctx.translate(150 + ox, 210);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 38 * progress, 85 * progress, 0, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.fillStyle = '#f8f8f8';
+        ctx.fillRect(-50, -100, 100, 200);
+        ctx.lineWidth = 2.2;
+        ctx.strokeStyle = '#252525';
+        for (let r = 5; r <= 100; r += 6.5) {
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+    } else {
+      // Single Flat or Rolled (Rolled is wider)
+      const rx = captureType === 'ROLLED' ? 120 * progress : 90 * progress;
+      const ry = 140 * progress;
+      ctx.translate(150, 205);
       ctx.beginPath();
-      for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
-        // Ridge perturbations (whorl / loop pattern)
-        const disturbance = Math.sin(angle * 3.5 + r * 0.1) * 3.5 + Math.cos(angle * 2) * 2;
-        const radX = (r + disturbance) * 0.85;
-        const radY = (r + disturbance) * 1.35;
-        const px = Math.cos(angle) * radX;
-        const py = Math.sin(angle) * radY + (r > 60 ? (r - 60) * 0.2 : 0);
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#f8f8f8';
+      ctx.fillRect(-150, -200, 300, 400);
 
-        if (angle === 0) ctx.moveTo(px, py);
-        else ctx.lineTo(px, py);
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = '#252525';
+      const totalRings = captureType === 'ROLLED' ? 30 : 24;
+      for (let r = 5; r <= totalRings * 7; r += 7) {
+        ctx.beginPath();
+        for (let angle = 0; angle <= Math.PI * 2; angle += 0.05) {
+          const disturbance = Math.sin(angle * 3.5 + r * 0.1) * 3.5 + Math.cos(angle * 2) * 2;
+          const radX = (r + disturbance) * (captureType === 'ROLLED' ? 1.05 : 0.85);
+          const radY = (r + disturbance) * 1.35;
+          const px = Math.cos(angle) * radX;
+          const py = Math.sin(angle) * radY + (r > 60 ? (r - 60) * 0.2 : 0);
+          if (angle === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
       }
-      ctx.stroke();
-    }
 
-    // Add random minutiae terminations & breaks
-    ctx.fillStyle = '#f8f8f8';
-    const seeds = [
-      { x: -35, y: -40 }, { x: 45, y: 30 }, { x: -20, y: 55 },
-      { x: 30, y: -65 }, { x: -50, y: 15 }, { x: 55, y: -20 },
-      { x: 0, y: 80 }, { x: -40, y: -90 }, { x: 35, y: 95 }
-    ];
-    for (const s of seeds) {
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
-      ctx.fill();
+      // Add Minutiae breaks
+      ctx.fillStyle = '#f8f8f8';
+      const seeds = [
+        { x: -35, y: -40 }, { x: 45, y: 30 }, { x: -20, y: 55 },
+        { x: 30, y: -65 }, { x: -50, y: 15 }, { x: 55, y: -20 }
+      ];
+      for (const s of seeds) {
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     ctx.restore();
-
-    // Blur slightly for realistic optical sensor MTF
     ctx.filter = 'blur(0.5px)';
     ctx.drawImage(canvas, 0, 0);
 

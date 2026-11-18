@@ -78,6 +78,22 @@
           </button>
         </div>
 
+        <!-- Barra de Selección de Tipo de Huella Biometría Forense -->
+        <div class="finger-type-selector-bar">
+          <button class="finger-type-btn active" data-type="ROLLED">
+            <span class="type-icon">🌀</span> HUELLA RODADA (1 AL 10)
+          </button>
+          <button class="finger-type-btn" data-type="FLAT_SINGLE">
+            <span class="type-icon">👆</span> PLANA INDIVIDUAL
+          </button>
+          <button class="finger-type-btn" data-type="SLAP_3_4">
+            <span class="type-icon">🖐</span> SIMULTÁNEAS ÍNDICE-MEDIO-ANULAR
+          </button>
+          <button class="finger-type-btn" data-type="DUAL_THUMBS">
+            <span class="type-icon">👍👍</span> DOS PULGARES SIMULTÁNEOS
+          </button>
+        </div>
+
         <!-- Vertical Forensic Viewport -->
         <div class="viewport-panel">
           <div class="canvas-wrapper">
@@ -314,6 +330,15 @@
           <div class="form-group">
             <label class="form-label">DNI / Documento de Identidad</label>
             <input type="text" id="inputDocId" class="form-input" placeholder="Ej: 34.892.115">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo de Impresión</label>
+            <select id="inputCaptureTypeSelect" class="form-select">
+              <option value="Huella Rodada (1 al 10)" selected>Huella Rodada (1 al 10)</option>
+              <option value="Plana Individual">Plana Individual</option>
+              <option value="Simultáneas Índice-Medio-Anular">Simultáneas Índice-Medio-Anular</option>
+              <option value="Dos Pulgares Simultáneos">Dos Pulgares Simultáneos</option>
+            </select>
           </div>
           <div class="form-group">
             <label class="form-label">Dedo Capturado</label>

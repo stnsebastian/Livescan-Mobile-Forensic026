@@ -3,7 +3,7 @@
  * Garantiza funcionamiento pericial completo en terreno sin señal celular ni internet.
  */
 
-const CACHE_NAME = 'livescan-mobile-v2.4';
+const CACHE_NAME = 'livescan-mobile-v2.5';
 
 // Recursos críticos indispensables para arranque offline
 const CORE_ASSETS = [
@@ -63,31 +63,41 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Estrategia Cache-First (Offline por defecto)
+  // Estrategia Network-First para navegación y scripts (actualización inmediata de código)
+  if (event.request.mode === 'navigate' || event.request.destination === 'script' || event.request.destination === 'style') {
+    event.respondWith(
+      fetch(event.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const resClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
+        }
+        return networkResponse;
+      }).catch(() => {
+        return caches.match(event.request, { ignoreSearch: true }).then((cached) => {
+          if (cached) return cached;
+          if (event.request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+        });
+      })
+    );
+    return;
+  }
+
+  // Para imágenes y recursos estáticos: Cache-First
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-
-      // Si no está en caché, intentar red y almacenar copia local automáticamente
       return fetch(event.request).then((networkResponse) => {
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          event.request.url.startsWith(self.location.origin)
-        ) {
+        if (networkResponse && networkResponse.status === 200 && event.request.url.startsWith(self.location.origin)) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseToCache);
           });
         }
         return networkResponse;
-      }).catch(() => {
-        // En caso de corte total de red en navegación, servir index.html
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
       });
     })
   );

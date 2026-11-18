@@ -337,53 +337,54 @@ export class ForensicProcessor {
   }
 
   /**
-   * Zhang-Suen morphological thinning algorithm
+   * High-Performance Zhang-Suen morphological thinning algorithm (Zero GC Array Allocations)
    */
   _zhangSuenThinning(binary, w, h) {
     const s = new Uint8Array(binary);
     let changed = true;
     const toRemove = [];
-
-    const getNeighbors = (x, y) => {
-      // P9 P2 P3
-      // P8 P1 P4
-      // P7 P6 P5
-      const p2 = s[(y - 1) * w + x];
-      const p3 = s[(y - 1) * w + (x + 1)];
-      const p4 = s[y * w + (x + 1)];
-      const p5 = s[(y + 1) * w + (x + 1)];
-      const p6 = s[(y + 1) * w + x];
-      const p7 = s[(y + 1) * w + (x - 1)];
-      const p8 = s[y * w + (x - 1)];
-      const p9 = s[(y - 1) * w + (x - 1)];
-      return [p2, p3, p4, p5, p6, p7, p8, p9];
-    };
-
     let iterations = 0;
-    while (changed && iterations < 32) {
+
+    while (changed && iterations < 25) {
       changed = false;
       iterations++;
 
       // Sub-iteration 1
       for (let y = 1; y < h - 1; y++) {
+        const yPrev = (y - 1) * w;
+        const yCur = y * w;
+        const yNext = (y + 1) * w;
+
         for (let x = 1; x < w - 1; x++) {
-          if (s[y * w + x] !== 1) continue;
-          const [p2, p3, p4, p5, p6, p7, p8, p9] = getNeighbors(x, y);
+          if (s[yCur + x] !== 1) continue;
+
+          const p2 = s[yPrev + x];
+          const p3 = s[yPrev + (x + 1)];
+          const p4 = s[yCur + (x + 1)];
+          const p5 = s[yNext + (x + 1)];
+          const p6 = s[yNext + x];
+          const p7 = s[yNext + (x - 1)];
+          const p8 = s[yCur + (x - 1)];
+          const p9 = s[yPrev + (x - 1)];
 
           const bVal = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
           if (bVal < 2 || bVal > 6) continue;
 
-          const seq = [p2, p3, p4, p5, p6, p7, p8, p9, p2];
           let aVal = 0;
-          for (let i = 0; i < 8; i++) {
-            if (seq[i] === 0 && seq[i + 1] === 1) aVal++;
-          }
+          if (p2 === 0 && p3 === 1) aVal++;
+          if (p3 === 0 && p4 === 1) aVal++;
+          if (p4 === 0 && p5 === 1) aVal++;
+          if (p5 === 0 && p6 === 1) aVal++;
+          if (p6 === 0 && p7 === 1) aVal++;
+          if (p7 === 0 && p8 === 1) aVal++;
+          if (p8 === 0 && p9 === 1) aVal++;
+          if (p9 === 0 && p2 === 1) aVal++;
           if (aVal !== 1) continue;
 
           if (p2 * p4 * p6 !== 0) continue;
           if (p4 * p6 * p8 !== 0) continue;
 
-          toRemove.push(y * w + x);
+          toRemove.push(yCur + x);
         }
       }
 
@@ -394,24 +395,40 @@ export class ForensicProcessor {
 
       // Sub-iteration 2
       for (let y = 1; y < h - 1; y++) {
+        const yPrev = (y - 1) * w;
+        const yCur = y * w;
+        const yNext = (y + 1) * w;
+
         for (let x = 1; x < w - 1; x++) {
-          if (s[y * w + x] !== 1) continue;
-          const [p2, p3, p4, p5, p6, p7, p8, p9] = getNeighbors(x, y);
+          if (s[yCur + x] !== 1) continue;
+
+          const p2 = s[yPrev + x];
+          const p3 = s[yPrev + (x + 1)];
+          const p4 = s[yCur + (x + 1)];
+          const p5 = s[yNext + (x + 1)];
+          const p6 = s[yNext + x];
+          const p7 = s[yNext + (x - 1)];
+          const p8 = s[yCur + (x - 1)];
+          const p9 = s[yPrev + (x - 1)];
 
           const bVal = p2 + p3 + p4 + p5 + p6 + p7 + p8 + p9;
           if (bVal < 2 || bVal > 6) continue;
 
-          const seq = [p2, p3, p4, p5, p6, p7, p8, p9, p2];
           let aVal = 0;
-          for (let i = 0; i < 8; i++) {
-            if (seq[i] === 0 && seq[i + 1] === 1) aVal++;
-          }
+          if (p2 === 0 && p3 === 1) aVal++;
+          if (p3 === 0 && p4 === 1) aVal++;
+          if (p4 === 0 && p5 === 1) aVal++;
+          if (p5 === 0 && p6 === 1) aVal++;
+          if (p6 === 0 && p7 === 1) aVal++;
+          if (p7 === 0 && p8 === 1) aVal++;
+          if (p8 === 0 && p9 === 1) aVal++;
+          if (p9 === 0 && p2 === 1) aVal++;
           if (aVal !== 1) continue;
 
           if (p2 * p4 * p8 !== 0) continue;
           if (p2 * p6 * p8 !== 0) continue;
 
-          toRemove.push(y * w + x);
+          toRemove.push(yCur + x);
         }
       }
 

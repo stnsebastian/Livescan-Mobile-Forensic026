@@ -1043,6 +1043,14 @@ const initLiveScanApp = () => {
     console.log('[LiveScan] Aplicación inicializada con éxito.');
   } catch (err) {
     console.error('[LiveScan] Error crítico de inicialización:', err);
+    var errBox = document.getElementById('debugErrorBanner');
+    if (!errBox) {
+      errBox = document.createElement('div');
+      errBox.id = 'debugErrorBanner';
+      errBox.style = 'position:fixed;bottom:62px;left:8px;right:8px;background:rgba(220,38,38,0.95);color:#fff;padding:10px 12px;border-radius:8px;font-size:11px;z-index:99999;font-family:monospace;border:1px solid #ff4444;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+      document.body.appendChild(errBox);
+    }
+    errBox.innerHTML = '<strong>❌ Error de Inicio:</strong> ' + (err.message || err);
   }
 };
 

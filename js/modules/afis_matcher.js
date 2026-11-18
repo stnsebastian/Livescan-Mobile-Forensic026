@@ -37,9 +37,10 @@ export class AFISMatcher {
     let bestPairs = [];
     let bestTransform = { dx: 0, dy: 0, angle: 0 };
 
-    // Select high-quality candidate pairs to hypothesize alignment transformations
-    const maxProbeSamples = Math.min(30, probeMinutiae.length);
-    const maxRefSamples = Math.min(30, refMinutiae.length);
+    // Sample candidate reference pairs to find optimal affine transform
+    // Bounded to 12 x 12 hypotheses max to maintain < 5ms instant execution on mobile
+    const maxProbeSamples = Math.min(12, probeMinutiae.length);
+    const maxRefSamples = Math.min(12, refMinutiae.length);
 
     for (let i = 0; i < maxProbeSamples; i++) {
       const p = probeMinutiae[i];

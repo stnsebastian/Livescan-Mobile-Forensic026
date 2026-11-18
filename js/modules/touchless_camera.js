@@ -28,6 +28,11 @@ export class TouchlessCameraScanner {
   async start() {
     this.onStatusChange({ state: 'starting', message: 'Iniciando cámara macro con flash...' });
 
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      this.onStatusChange({ state: 'error', message: 'Cámara no soportada o contexto no seguro (requiere HTTPS o localhost).' });
+      return false;
+    }
+
     try {
       const constraints = {
         audio: false,
@@ -68,6 +73,7 @@ export class TouchlessCameraScanner {
 
   async setTorch(enable) {
     if (!this.track) return false;
+
     try {
       // Standard W3C MediaTrackConstraints torch mode
       await this.track.applyConstraints({
@@ -78,7 +84,6 @@ export class TouchlessCameraScanner {
     } catch (e) {
       console.warn('Torch constraint error on track:', e);
       try {
-        // Secondary attempt with exact boolean
         const cap = this.track.getCapabilities ? this.track.getCapabilities() : {};
         if (cap.torch) {
           await this.track.applyConstraints({
@@ -115,7 +120,6 @@ export class TouchlessCameraScanner {
   async triggerAutofocus() {
     if (!this.track) return;
     try {
-      // Re-trigger continuous autofocus
       await this.track.applyConstraints({
         advanced: [{ focusMode: 'continuous' }]
       });

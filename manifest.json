@@ -1,0 +1,31 @@
+{
+  "name": "LiveScan Mobile Forensic",
+  "short_name": "LiveScan",
+  "description": "Sistema móvil de captura dactiloscópica forense - Perito Forense Jorge PINO A. / Bicrim San Javier",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070a10",
+  "theme_color": "#070a10",
+  "categories": ["forensic", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "icons/icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

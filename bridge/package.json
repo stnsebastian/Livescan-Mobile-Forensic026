@@ -1,0 +1,12 @@
+{
+  "name": "livescan-pc-bridge",
+  "version": "1.0.0",
+  "description": "Servidor de enlace Wi-Fi WebSocket para escáneres dactilares Suprema RealScan hacia la PWA LiveScan Mobile",
+  "main": "pc_bridge.js",
+  "scripts": {
+    "start": "node pc_bridge.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

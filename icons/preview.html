@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Vista Previa - Ícono Oficial LiveScan Mobile Forensic</title>
+  <style>
+    body {
+      background: #080d16;
+      color: #f0f6fc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    h1 {
+      font-size: 20px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #00e5ff;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: #ffd700;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: monospace;
+      margin-bottom: 30px;
+    }
+    .grid {
+      display: flex;
+      gap: 30px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .card {
+      background: rgba(18, 26, 42, 0.8);
+      border: 1px solid rgba(0, 229, 255, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .label {
+      font-size: 11px;
+      font-family: monospace;
+      color: #8b9bb4;
+      text-transform: uppercase;
+    }
+    img {
+      border-radius: 22%;
+      box-shadow: 0 8px 24px rgba(0, 229, 255, 0.25);
+    }
+    .phone-mockup {
+      width: 140px;
+      background: #000;
+      border: 3px solid #333;
+      border-radius: 24px;
+      padding: 16px 10px 20px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .phone-label {
+      font-size: 10px;
+      color: #fff;
+      font-weight: 600;
+      text-align: center;
+    }
+    .btn {
+      background: linear-gradient(135deg, #00b4d8 0%, #0077b6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Ícono Oficial "EF" Biométrico - LiveScan Mobile Forensic</h1>
+  <div class="subtitle">Perito Forense Jorge PINO A. / Bicrim San Javier.</div>
+
+  <div class="grid">
+    <!-- 512x512 Master -->
+    <div class="card">
+      <img src="icon.svg" width="220" height="220" alt="Icon 512">
+      <span class="label">Resolución Máster 512x512</span>
+      <button class="btn" onclick="downloadPng(512)">Descargar PNG (512px)</button>
+    </div>
+
+    <!-- 192x192 PWA Launcher -->
+    <div class="card">
+      <img src="icon.svg" width="128" height="128" alt="Icon 192">
+      <span class="label">Android HD (192px)</span>
+      <button class="btn" onclick="downloadPng(192)">Descargar PNG (192px)</button>
+    </div>
+
+    <!-- Mobile Screen Mockup -->
+    <div class="card">
+      <div class="phone-mockup">
+        <div style="width: 30px; height: 3px; background: #555; border-radius: 2px; margin-bottom: 8px;"></div>
+        <img src="icon.svg" width="60" height="60" alt="Icon App">
+        <div class="phone-label">LiveScan</div>
+      </div>
+      <span class="label">Simulación Pantalla Móvil</span>
+    </div>
+  </div>
+
+  <canvas id="exportCanvas" style="display: none;"></canvas>
+
+  <script>
+    function downloadPng(size) {
+      const canvas = document.getElementById('exportCanvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        const a = document.createElement('a');
+        a.download = `icon-${size}.png`;
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = 'icon.svg';
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070a10">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="LiveScan Mobile Forensic PWA - Sistema móvil de captura dactiloscópica forense: USB OTG, Wi-Fi RealScan Bridge y Touchless Macro con cotejo 1:1 neón">
+  <title>LiveScan Mobile Forensic</title>
+  
+  <link rel="icon" type="image/png" href="icons/icon.png">
+  <link rel="apple-touch-icon" href="icons/icon.png">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- Top Forensic Header -->
+    <header class="top-header">
+      <div class="brand">
+        <img src="icons/icon.png" onerror="this.onerror=null; this.src='icons/icon.svg';" class="brand-icon" alt="LiveScan" style="border-radius: 6px; box-shadow: 0 0 8px rgba(0, 229, 255, 0.4);">
+        <div class="brand-info">
+          <div class="brand-title">LiveScan <span class="brand-badge">MOBILE</span></div>
+          <div class="officer-tag-yellow">Perito Forense Jorge PINO A. / Bicrim San Javier.</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div id="statusIndicator" class="header-status-indicator">
+          <span id="statusDot" class="status-dot"></span>
+          <span id="statusText">Listo</span>
+        </div>
+        <button id="btnBridgeSettings" class="btn-secondary" style="padding: 6px;" title="Configurar Puente Wi-Fi">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Banner Pericial Oficial en Amarillo -->
+    <div class="officer-banner-yellow">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      </svg>
+      <span>Perito Forense Jorge PINO A. / Bicrim San Javier.</span>
+    </div>
+
+    <!-- Main Views Container -->
+    <main class="main-view-container">
+
+      <!-- ========================================================
+           TAB 1: LIVE FORENSIC CAPTURE & VIEWER
+           ======================================================== -->
+      <section id="tabCapture" class="tab-view active">
+        <!-- 3-Mode Selector Pills -->
+        <div class="mode-selector">
+          <button id="modeUsbBtn" class="mode-btn active" data-mode="usb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M12 2l4 4M12 2L8 6"></path>
+              <circle cx="8" cy="18" r="2"></circle>
+              <rect x="14" y="16" width="4" height="4"></rect>
+            </svg>
+            1. USB OTG
+          </button>
+          <button id="modeWifiBtn" class="mode-btn" data-mode="wifi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+              <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+              <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+              <circle cx="12" cy="20" r="1"></circle>
+            </svg>
+            2. Wi-Fi Bridge
+          </button>
+          <button id="modeTouchlessBtn" class="mode-btn" data-mode="touchless">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+              <circle cx="12" cy="13" r="4"></circle>
+            </svg>
+            3. Touchless
+          </button>
+        </div>
+
+        <!-- Vertical Forensic Viewport -->
+        <div class="viewport-panel">
+          <div class="canvas-wrapper">
+            <canvas id="mainCanvas" width="300" height="400"></canvas>
+            <canvas id="overlayCanvas" width="300" height="400"></canvas>
+            <video id="scannerVideo" playsinline autoplay muted></video>
+
+            <!-- Touchless Reticle & Guide -->
+            <div id="touchlessReticle" class="touchless-reticle">
+              <div class="reticle-center-cross"></div>
+              <div id="reticleLabel" class="reticle-label">ALINEAR DEDO</div>
+            </div>
+          </div>
+
+          <!-- HUD Telemetry Overlay -->
+          <div class="hud-telemetry">
+            <div class="hud-pill">
+              <span>NFIQ:</span>
+              <span id="hudNfiq" class="nfiq-badge nfiq-3">--</span>
+            </div>
+            <div class="hud-pill">
+              <span id="hudMinutiaeCount">0 Minucias</span>
+            </div>
+          </div>
+
+          <!-- Forensic Layer Controls -->
+          <div class="layer-controls">
+            <button class="layer-btn active" data-layer="raw">ORIGINAL</button>
+            <button class="layer-btn" data-layer="binary">REALZADO</button>
+            <button class="layer-btn" data-layer="skeleton">ESQUELETO</button>
+            <button class="layer-btn" data-layer="minutiae">MINUCIAS</button>
+            <button class="layer-btn" data-layer="flow">FLUJO</button>
+          </div>
+        </div>
+
+        <!-- Capture Bottom Action Section -->
+        <div class="capture-controls">
+          <!-- Touchless Camera Dynamic Controls -->
+          <div id="touchlessParamsBar" class="touchless-params">
+            <button id="btnToggleFlash" class="btn-icon-toggle">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              Flash / Linterna
+            </button>
+            <div class="param-group">
+              <span>Macro:</span>
+              <input type="range" id="zoomSlider" min="1" max="4" step="0.1" value="1.5">
+            </div>
+          </div>
+
+          <!-- Trigger and Actions Row -->
+          <div class="action-buttons-row">
+            <button id="btnMainCapture" class="btn-primary">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
+              </svg>
+              <span id="captureBtnLabel">INICIAR CAPTURA</span>
+            </button>
+
+            <button id="btnOpenSaveModal" class="btn-secondary" title="Guardar en Base de Datos">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+            </button>
+
+            <button id="btnSendToMatch" class="btn-secondary" title="Enviar a Cotejo 1:1">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="9" cy="9" r="6"></circle>
+                <circle cx="15" cy="15" r="6"></circle>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 2: COTEJO 1:1 CON LUZ NEÓN (NEON MATCHING AFIS)
+           ======================================================== -->
+      <section id="tabMatch" class="tab-view">
+        <div class="match-view">
+          <div class="match-header-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 700; font-size: 13px; text-transform: uppercase; color: var(--accent-cyan);">
+                Verificación Biometría 1:1
+              </span>
+              <button id="btnSelectRefDb" class="btn-secondary" style="padding: 4px 8px; font-size: 11px;">
+                Cargar Referencia BD
+              </button>
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary);">
+              Coteje la huella actual (Evidencia) contra un registro dactilar de control o archivo de referencia.
+            </div>
+            <div style="font-size: 10.5px; color: #ffd700; font-weight: 700; font-family: var(--font-mono); text-shadow: 0 0 6px rgba(255, 215, 0, 0.4); text-transform: uppercase;">
+              Perito Actuante: Perito Forense Jorge PINO A. / Bicrim San Javier.
+            </div>
+          </div>
+
+          <!-- Dual Viewports with Neon Laser Sweeper -->
+          <div class="dual-viewport-container">
+            <!-- Probe / Evidencia -->
+            <div class="match-box">
+              <span class="match-box-title">Evidencia (Probe)</span>
+              <canvas id="matchProbeCanvas" class="match-canvas" width="240" height="320"></canvas>
+            </div>
+
+            <!-- Reference / Cotejo -->
+            <div class="match-box">
+              <span class="match-box-title">Referencia (Control)</span>
+              <canvas id="matchRefCanvas" class="match-canvas" width="240" height="320"></canvas>
+            </div>
+
+            <!-- Neon Scanning Beam Animation -->
+            <div id="neonLaserSweep" class="neon-laser-sweep"></div>
+          </div>
+
+          <!-- Match Action Button -->
+          <button id="btnExecuteMatch" class="btn-primary" style="margin-top: 4px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            EJECUTAR COTEJO 1:1 CON LUZ NEÓN
+          </button>
+
+          <!-- Neon Match Result Panel -->
+          <div class="match-result-card">
+            <div class="match-score-radial">
+              <svg class="radial-svg" viewBox="0 0 120 120">
+                <circle class="radial-bg" cx="60" cy="60" r="54"></circle>
+                <circle id="radialScoreIndicator" class="radial-indicator" cx="60" cy="60" r="54"></circle>
+              </svg>
+              <div class="radial-score-text">
+                <div id="matchPercentage" class="radial-percentage">0%</div>
+                <div class="radial-label">Similitud</div>
+              </div>
+            </div>
+
+            <div id="matchVerdictBanner" class="verdict-banner non-match">
+              ESPERANDO COMPARACIÓN
+            </div>
+
+            <!-- Forensic Stats Grid -->
+            <div class="match-details-grid">
+              <div class="match-stat-cell">
+                <div id="statMatchedPoints" class="stat-val">0</div>
+                <div class="stat-lbl">Puntos Coincidentes</div>
+              </div>
+              <div class="match-stat-cell">
+                <div id="statRotation" class="stat-val">0°</div>
+                <div class="stat-lbl">Rotación Offset</div>
+              </div>
+              <div class="match-stat-cell">
+                <div id="statDecision" class="stat-val">--</div>
+                <div class="stat-lbl">Estándar Forense</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================
+           TAB 3: LOCAL DATABASE & DOSSIERS
+           ======================================================== -->
+      <section id="tabDatabase" class="tab-view">
+        <div class="database-view">
+          <div class="db-search-bar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="dbSearchInput" class="db-search-input" placeholder="Buscar por DNI, Nombre, Causa o Dedo...">
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button id="btnExportDb" class="btn-secondary" style="flex: 1; font-size: 11px;">
+              Exportar JSON
+            </button>
+            <button id="btnImportDb" class="btn-secondary" style="flex: 1; font-size: 11px;">
+              Importar Backup
+            </button>
+            <input type="file" id="importFileInput" accept=".json" style="display: none;">
+          </div>
+
+          <!-- Records List Container -->
+          <div id="recordsList" class="records-list">
+            <!-- Records dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <div class="nav-item active" data-tab="tabCapture">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2a10 10 0 0 0-10 10v2a10 10 0 0 0 20 0v-2a10 10 0 0 0-10-10z"></path>
+          <path d="M12 6a6 6 0 0 0-6 6v2a6 6 0 0 0 12 0v-2a6 6 0 0 0-6-6z"></path>
+        </svg>
+        <span>Captura</span>
+      </div>
+      <div class="nav-item" data-tab="tabMatch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="8" cy="8" r="6"></circle>
+          <path d="M18 9v6m-3-3h6"></path>
+          <circle cx="16" cy="16" r="6"></circle>
+        </svg>
+        <span>Cotejo 1:1</span>
+      </div>
+      <div class="nav-item" data-tab="tabDatabase">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+        </svg>
+        <span>Base de Datos</span>
+      </div>
+    </nav>
+
+    <!-- Modal: Save Dossier / Record -->
+    <div id="saveRecordModal" class="modal-overlay">
+      <div class="modal-bottom-sheet">
+        <div class="modal-header">
+          <h3 class="modal-title">Guardar Registro Dactilar</h3>
+          <button id="btnCloseSaveModal" class="btn-secondary" style="padding: 4px;">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nombre y Apellido del Sujeto</label>
+            <input type="text" id="inputFullName" class="form-input" placeholder="Ej: Juan Carlos Pérez">
+          </div>
+          <div class="form-group">
+            <label class="form-label">DNI / Documento de Identidad</label>
+            <input type="text" id="inputDocId" class="form-input" placeholder="Ej: 34.892.115">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Dedo Capturado</label>
+            <select id="inputFingerSelect" class="form-select">
+              <option value="Pulgar Derecho">Pulgar Derecho</option>
+              <option value="Índice Derecho" selected>Índice Derecho</option>
+              <option value="Medio Derecho">Medio Derecho</option>
+              <option value="Anular Derecho">Anular Derecho</option>
+              <option value="Meñique Derecho">Meñique Derecho</option>
+              <option value="Pulgar Izquierdo">Pulgar Izquierdo</option>
+              <option value="Índice Izquierdo">Índice Izquierdo</option>
+              <option value="Medio Izquierdo">Medio Izquierdo</option>
+              <option value="Anular Izquierdo">Anular Izquierdo</option>
+              <option value="Meñique Izquierdo">Meñique Izquierdo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nº Expediente / Causa Judicial</label>
+            <input type="text" id="inputCaseNumber" class="form-input" placeholder="Ej: EXP-2026-4409">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Perito / Operador Forense</label>
+            <input type="text" id="inputOfficer" class="form-input" value="Perito Forense Jorge PINO A. / Bicrim San Javier." style="color: #ffd700; font-weight: 600;">
+          </div>
+          <button id="btnConfirmSaveRecord" class="btn-primary" style="margin-top: 10px;">
+            CONFIRMAR Y ALMACENAR
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Wi-Fi PC Bridge Configuration -->
+    <div id="bridgeConfigModal" class="modal-overlay">
+      <div class="modal-bottom-sheet">
+        <div class="modal-header">
+          <h3 class="modal-title">Puente Wi-Fi RealScan PC</h3>
+          <button id="btnCloseBridgeModal" class="btn-secondary" style="padding: 4px;">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Dirección WebSocket del Bridge (PC Forense)</label>
+            <input type="text" id="inputBridgeUrl" class="form-input" placeholder="ws://192.168.1.100:8080/ws">
+          </div>
+          <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+            Inicie el script <code>pc_realscan_bridge.py</code> o <code>node pc_bridge.js</code> en la computadora donde está conectado el escáner Suprema RealScan G-10 o BioMini. Ambos dispositivos deben estar en la misma red Wi-Fi.
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 6px;">
+            <button id="btnSaveBridgeUrl" class="btn-primary" style="flex: 1;">
+              Conectar y Guardar
+            </button>
+            <button id="btnTestBridgeSim" class="btn-secondary" style="flex: 1;">
+              Probar Simulación
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Area -->
+    <div id="toast-container"></div>
+  </div>
+
+  <!-- App Entry Script -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

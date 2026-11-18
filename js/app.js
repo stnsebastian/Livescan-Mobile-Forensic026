@@ -130,14 +130,37 @@ class LiveScanApp {
   }
 
   async init() {
-    this.applyTheme(this.currentTheme);
-    this.bindEvents();
-    await forensicDB.init();
-    this.renderDatabaseList();
-    this.registerServiceWorker();
+    try {
+      this.applyTheme(this.currentTheme);
+    } catch (e) {
+      console.warn('Theme init warning:', e);
+    }
 
-    // Set initial placeholder on main canvas
-    this.drawInitialPlaceholder();
+    try {
+      this.bindEvents();
+    } catch (e) {
+      console.error('Events binding error:', e);
+    }
+
+    try {
+      this.drawInitialPlaceholder();
+    } catch (e) {
+      console.warn('Canvas placeholder warning:', e);
+    }
+
+    try {
+      await forensicDB.init();
+      await this.renderDatabaseList();
+    } catch (e) {
+      console.warn('Database init warning:', e);
+    }
+
+    try {
+      this.registerServiceWorker();
+    } catch (e) {
+      console.warn('SW register warning:', e);
+    }
+
     if (!navigator.onLine) {
       this.setStatus('active', 'Modo Autónomo (Offline)');
       this.showToast('Modo Autónomo: Operando 100% sin internet.');
@@ -1012,7 +1035,21 @@ class LiveScanApp {
   }
 }
 
-// Instantiate on DOM load
-window.addEventListener('DOMContentLoaded', () => {
-  window.liveScanApp = new LiveScanApp();
-});
+// Instantiate on DOM load or immediately if already loaded (fixes mobile ES module deferred freeze)
+const initLiveScanApp = () => {
+  if (window.liveScanApp) return;
+  try {
+    window.liveScanApp = new LiveScanApp();
+    console.log('[LiveScan] Aplicación inicializada con éxito.');
+  } catch (err) {
+    console.error('[LiveScan] Error crítico de inicialización:', err);
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLiveScanApp);
+  window.addEventListener('load', initLiveScanApp);
+} else {
+  // Document is already interactive or complete
+  initLiveScanApp();
+}

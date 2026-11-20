@@ -38,9 +38,8 @@ export class TouchlessCameraScanner {
         audio: false,
         video: {
           facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-          focusMode: { ideal: 'continuous' }
+          width: { ideal: 1920, min: 640 },
+          height: { ideal: 1080, min: 480 }
         }
       };
 
@@ -52,6 +51,15 @@ export class TouchlessCameraScanner {
       if (this.track && this.track.getCapabilities) {
         this.capabilities = this.track.getCapabilities();
       }
+
+      // Try continuous focus if supported
+      try {
+        if (this.track && this.track.applyConstraints) {
+          await this.track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+        }
+      } catch (fErr) {}
 
       this.isActive = true;
 

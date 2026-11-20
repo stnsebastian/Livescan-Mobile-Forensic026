@@ -34,7 +34,28 @@ export class WebUSBScanner {
   }
 
   isSupported() {
-    return 'usb' in navigator;
+    return typeof navigator !== 'undefined' && 'usb' in navigator && !!navigator.usb;
+  }
+
+  getSupportDiagnostic() {
+    const ua = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+    const isSamsung = /SamsungBrowser/i.test(ua);
+
+    if (isSamsung) {
+      return {
+        supported: false,
+        reason: 'samsung_browser',
+        message: 'Navegador Samsung detectado: Samsung Internet no incluye WebUSB. Abra la app en GOOGLE CHROME para conectar el lector RealScan-D.'
+      };
+    }
+    if (!this.isSupported()) {
+      return {
+        supported: false,
+        reason: 'no_webusb',
+        message: 'WebUSB no disponible. Debe usar Google Chrome en Android bajo conexión HTTPS.'
+      };
+    }
+    return { supported: true, reason: 'ok', message: 'WebUSB disponible.' };
   }
 
   /**
@@ -65,8 +86,9 @@ export class WebUSBScanner {
    * Prompt user to pair USB OTG Scanner (e.g. RealScan-D)
    */
   async connect() {
-    if (!this.isSupported()) {
-      const err = new Error('WebUSB no está soportado en este navegador. Utilice Google Chrome en Android.');
+    const diag = this.getSupportDiagnostic();
+    if (!diag.supported) {
+      const err = new Error(diag.message);
       this.onStatusChange({ state: 'error', message: err.message });
       throw err;
     }
@@ -74,7 +96,7 @@ export class WebUSBScanner {
     try {
       this.onStatusChange({
         state: 'requesting',
-        message: 'Toque "RealScan-D" en la lista de la ventana y luego presione "Conectar"...'
+        message: 'Buscando lector USB...'
       });
 
       // Show native device selection dialog
@@ -83,7 +105,7 @@ export class WebUSBScanner {
         selectedDevice = await navigator.usb.requestDevice({ filters: this.knownVendorFilters });
       } catch (reqErr) {
         if (reqErr.name === 'NotFoundError') {
-          throw new Error('Emparejamiento cancelado. Toque el texto "RealScan-D" en la lista para marcarlo y presione Conectar.');
+          throw new Error('Emparejamiento cancelado.');
         }
         throw reqErr;
       }
@@ -95,7 +117,22 @@ export class WebUSBScanner {
       return await this._openAndClaimDevice(selectedDevice);
     } catch (err) {
       console.warn('USB Connection error:', err);
+      let userMsg = err.message || 'Error al conectar el escáner USB.';
+
+      // Specific Samsung Knox / One UI 6 / Android 14 error resolution
+      if (err.name === 'SecurityError' || /security|access denied|permission/i.test(err.message)) {
+        userMsg = 'Acceso USB restringido por Samsung One UI. Vaya a Ajustes > Seguridad y privacidad > Bloqueador automático y desactive "Bloquear comandos por cable USB".';
+      } else if (err.name === 'NetworkError' || /claim/i.test(err.message)) {
+        userMsg = 'El sistema retiene la interfaz USB. Desconecte y reconecte el cable OTG, o use un cable OTG en Y con alimentación externa.';
+      }
+
       this.isConnected = false;
+      this.onStatusChange({
+        state: 'error',
+        message: userMsg
+      });
+      throw new Error(userMsg);
+    }
       this.onStatusChange({
         state: 'error',
         message: err.message || 'Error al conectar el escáner USB.'
@@ -357,8 +394,8 @@ export class WebUSBScanner {
         resolve(null);
       });
 
-      // Timeout safety window (2.6 seconds)
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2600));
+      // Timeout safety window (1.0 second hardware query)
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
       physicalFrame = await Promise.race([readPromise, timeoutPromise]);
 
       if (physicalFrame) {

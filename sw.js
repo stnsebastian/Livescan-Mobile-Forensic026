@@ -1,9 +1,9 @@
 /**
  * LiveScan Mobile Forensic - PWA Service Worker (100% Autónomo / Offline-First)
- * Garantiza funcionamiento pericial completo en terreno sin señal celular ni internet.
+ * Compatible con Samsung Galaxy A06 / One UI / Android 14+ y navegadores modernos.
  */
 
-const CACHE_NAME = 'livescan-mobile-v2.8';
+const CACHE_NAME = 'livescan-mobile-v3.1';
 
 // Recursos críticos indispensables para arranque offline
 const CORE_ASSETS = [
@@ -11,6 +11,8 @@ const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './icons/icon.svg',
+  './icons/icon.png',
+  './icons/icon-192.png',
   './css/app.css',
   './js/app.js',
   './js/modules/db.js',
@@ -21,27 +23,17 @@ const CORE_ASSETS = [
   './js/modules/touchless_camera.js'
 ];
 
-// Recursos opcionales que se cachean si existen
-const OPTIONAL_ASSETS = [
-  './icons/icon.png',
-  './icons/icon-192.png'
-];
-
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(async (cache) => {
-      // 1. Cachear obligatoriamente todos los archivos nucleares del sistema
-      await cache.addAll(CORE_ASSETS);
-
-      // 2. Intentar cachear recursos secundarios sin bloquear si alguno falta
-      for (const asset of OPTIONAL_ASSETS) {
+      for (const asset of CORE_ASSETS) {
         try {
           const res = await fetch(asset);
           if (res && res.status === 200) {
             await cache.put(asset, res);
           }
         } catch (e) {
-          // Si no existe icon.png, no interrumpe la instalación offline
+          console.warn('[SW Install] Fallo al precachear:', asset);
         }
       }
     }).then(() => self.skipWaiting())
@@ -63,7 +55,7 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Estrategia Network-First para navegación y scripts (actualización inmediata de código)
+  // Estrategia Network-First con fallback seguro a Cache
   if (event.request.mode === 'navigate' || event.request.destination === 'script' || event.request.destination === 'style') {
     event.respondWith(
       fetch(event.request).then((networkResponse) => {
@@ -72,13 +64,14 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, resClone));
         }
         return networkResponse;
-      }).catch(() => {
-        return caches.match(event.request, { ignoreSearch: true }).then((cached) => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-        });
+      }).catch(async () => {
+        const cached = await caches.match(event.request, { ignoreSearch: true });
+        if (cached) return cached;
+        if (event.request.mode === 'navigate') {
+          const fallback = (await caches.match('./index.html')) || (await caches.match('./'));
+          if (fallback) return fallback;
+        }
+        return new Response('Modo Autónomo Offline', { status: 200, headers: { 'Content-Type': 'text/html' } });
       })
     );
     return;
@@ -98,6 +91,8 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
+      }).catch(() => {
+        return new Response('', { status: 408 });
       });
     })
   );

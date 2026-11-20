@@ -73,8 +73,13 @@ class LiveScanApp {
       btnToggleUsbLight: document.getElementById('btnToggleUsbLight'),
       usbLightIcon: document.getElementById('usbLightIcon'),
       usbLightLabel: document.getElementById('usbLightLabel'),
-      usbHelpBox: document.getElementById('usbHelpBox'),
-      usbHelpText: document.getElementById('usbHelpText'),
+      btnDirectUsbCapture: document.getElementById('btnDirectUsbCapture'),
+      btnSamsungHelp: document.getElementById('btnSamsungHelp'),
+      samsungBrowserBanner: document.getElementById('samsungBrowserBanner'),
+      btnCloseSamsungBanner: document.getElementById('btnCloseSamsungBanner'),
+      samsungHelpModal: document.getElementById('samsungHelpModal'),
+      btnCloseSamsungModal: document.getElementById('btnCloseSamsungModal'),
+      btnAckSamsungHelp: document.getElementById('btnAckSamsungHelp'),
       // Touchless params
       touchlessParamsBar: document.getElementById('touchlessParamsBar'),
       btnToggleFlash: document.getElementById('btnToggleFlash'),
@@ -188,6 +193,15 @@ class LiveScanApp {
     } else {
       this.showToast('LiveScan Mobile Forensic inicializado.');
     }
+
+    // Samsung Galaxy A06 / Samsung Internet detector
+    const ua = navigator.userAgent || '';
+    if (/SamsungBrowser/i.test(ua)) {
+      if (this.dom.samsungBrowserBanner) {
+        this.dom.samsungBrowserBanner.style.display = 'flex';
+      }
+      this.showToast('📱 En Samsung: use Google Chrome para conectar lectores USB.', 7000);
+    }
   }
 
   bindEvents() {
@@ -284,6 +298,33 @@ class LiveScanApp {
       });
     }
 
+    // Samsung Galaxy A06 Guidance Modal Events
+    if (this.dom.btnSamsungHelp) {
+      this.dom.btnSamsungHelp.addEventListener('click', () => {
+        this.dom.samsungHelpModal?.classList.add('active');
+      });
+    }
+
+    if (this.dom.btnCloseSamsungModal) {
+      this.dom.btnCloseSamsungModal.addEventListener('click', () => {
+        this.dom.samsungHelpModal?.classList.remove('active');
+      });
+    }
+
+    if (this.dom.btnAckSamsungHelp) {
+      this.dom.btnAckSamsungHelp.addEventListener('click', () => {
+        this.dom.samsungHelpModal?.classList.remove('active');
+      });
+    }
+
+    if (this.dom.btnCloseSamsungBanner) {
+      this.dom.btnCloseSamsungBanner.addEventListener('click', () => {
+        if (this.dom.samsungBrowserBanner) {
+          this.dom.samsungBrowserBanner.style.display = 'none';
+        }
+      });
+    }
+
     // USB Scanner Direct Light & Sensor Toggle
     if (this.dom.btnToggleUsbLight) {
       this.dom.btnToggleUsbLight.addEventListener('click', async () => {
@@ -292,13 +333,21 @@ class LiveScanApp {
           this.dom.btnToggleUsbLight.classList.toggle('active', isNowOn);
           if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = isNowOn ? '🟢' : '💡';
           if (this.dom.usbLightLabel) {
-            this.dom.usbLightLabel.textContent = isNowOn ? 'APAGAR LUZ PRISMA' : 'ACTIVAR LUZ DEL PRISMA / SENSOR';
+            this.dom.usbLightLabel.textContent = isNowOn ? 'APAGAR LUZ' : 'ACTIVAR LUZ PRISMA';
           }
           if (navigator.vibrate) navigator.vibrate(40);
-          this.showToast(isNowOn ? '🟢 Luz del prisma activada (Verde/Captura).' : 'Luz del prisma apagada (Standby).');
+          this.showToast(isNowOn ? '🟢 Señal de luz enviada a RealScan-D.' : 'Luz apagada.');
         } catch (err) {
           this.showToast(err.message || 'Error al cambiar estado de luz USB.');
         }
+      });
+    }
+
+    // Direct USB Forensic Capture Button
+    if (this.dom.btnDirectUsbCapture) {
+      this.dom.btnDirectUsbCapture.addEventListener('click', async () => {
+        this.showToast(`Iniciando toma pericial (${this.currentCaptureType})...`);
+        await this.usbScanner._simulateOTGCapture(this.currentCaptureType);
       });
     }
 
@@ -569,7 +618,7 @@ class LiveScanApp {
       await this.usbScanner.disconnect();
       this.showToast('Lector USB desconectado.');
     } else {
-      this.showToast('👉 Toque "RealScan-D" en la lista de la ventana y presione "Conectar".', 5000);
+      this.showToast('Conectando lector USB...');
       try {
         await this.usbScanner.connect();
         if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
@@ -681,12 +730,6 @@ class LiveScanApp {
         if (this.dom.usbActionsSecondary) {
           this.dom.usbActionsSecondary.style.display = 'flex';
         }
-        if (this.dom.usbHelpBox) {
-          this.dom.usbHelpBox.style.display = 'flex';
-        }
-        if (this.dom.usbHelpText) {
-          this.dom.usbHelpText.innerHTML = 'Lector en línea. Si el lector mantiene la <strong>luz roja fija</strong>, presione <strong>"ACTIVAR LUZ DEL PRISMA"</strong> o <strong>"INICIAR CAPTURA"</strong>.';
-        }
       } else if (info.state === 'disconnected' || info.state === 'error') {
         this.dom.btnConnectUsb?.classList.remove('connected');
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '🔌';
@@ -703,12 +746,6 @@ class LiveScanApp {
         this.dom.btnToggleUsbLight?.classList.remove('active');
         if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = '💡';
         if (this.dom.usbLightLabel) this.dom.usbLightLabel.textContent = 'ACTIVAR LUZ DEL PRISMA / SENSOR';
-        if (this.dom.usbHelpBox) {
-          this.dom.usbHelpBox.style.display = 'flex';
-        }
-        if (this.dom.usbHelpText) {
-          this.dom.usbHelpText.innerHTML = 'Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.';
-        }
       } else if (info.state === 'requesting') {
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '⏳';
         if (this.dom.usbConnectLabel) {

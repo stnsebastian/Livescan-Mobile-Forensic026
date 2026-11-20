@@ -59,6 +59,13 @@
       <span>Perito Forense Jorge PINO A. / Bicrim San Javier.</span>
     </div>
 
+    <!-- Samsung Browser Warning Banner (Auto-detect) -->
+    <div id="samsungBrowserBanner" class="samsung-browser-banner" style="display: none;">
+      <span class="banner-icon">📱</span>
+      <span class="banner-text"><strong>Aviso Samsung Galaxy A06:</strong> Para conectar el lector USB, abra la app en <strong>Google Chrome</strong> (Samsung Internet no soporta WebUSB).</span>
+      <button id="btnCloseSamsungBanner" class="btn-close-banner" type="button">✕</button>
+    </div>
+
     <!-- Main Views Container -->
     <main class="main-view-container">
 
@@ -170,18 +177,21 @@
                 <span id="usbConnectIcon">🔌</span>
                 <span id="usbConnectLabel">CONECTAR LECTOR USB (REALSCAN-D)</span>
               </button>
+              <button id="btnSamsungHelp" class="btn-samsung-help" type="button" title="Guía para Samsung A06">
+                📱 Samsung A06
+              </button>
               <span id="usbStatusBadge" class="usb-badge disconnected">Desconectado</span>
             </div>
             <!-- Secondary USB Actions (Manual Light & Sensor Activation) -->
             <div id="usbActionsSecondary" class="usb-actions-secondary" style="display: none;">
               <button id="btnToggleUsbLight" class="btn-usb-light" type="button" title="Activar / Probar Luz del Prisma Óptico">
                 <span id="usbLightIcon">💡</span>
-                <span id="usbLightLabel">ACTIVAR LUZ DEL PRISMA / SENSOR</span>
+                <span id="usbLightLabel">ACTIVAR LUZ PRISMA</span>
               </button>
-            </div>
-            <div id="usbHelpBox" class="usb-help-box">
-              <span class="help-icon">💡</span>
-              <span class="help-text" id="usbHelpText">Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.</span>
+              <button id="btnDirectUsbCapture" class="btn-usb-direct" type="button" title="Adquirir huella dactilar inmediatamente">
+                <span>⚡</span>
+                <span>TOMA INMEDIATA</span>
+              </button>
             </div>
           </div>
 
@@ -449,6 +459,40 @@
       </div>
     </div>
 
+    <!-- Modal: Guía de Compatibilidad Samsung Galaxy A06 -->
+    <div id="samsungHelpModal" class="modal-overlay">
+      <div class="modal-bottom-sheet">
+        <div class="modal-header">
+          <h3 class="modal-title">📱 Guía Samsung Galaxy A06</h3>
+          <button id="btnCloseSamsungModal" class="btn-secondary" style="padding: 4px;">✕</button>
+        </div>
+        <div class="modal-body">
+          <div style="font-size: 11.5px; line-height: 1.5; color: var(--text-main); display: flex; flex-direction: column; gap: 8px;">
+            <div style="padding: 8px 10px; background: rgba(0,229,255,0.08); border-left: 3px solid var(--accent-cyan); border-radius: 4px;">
+              <strong>1. Usar Google Chrome en su Galaxy A06:</strong><br>
+              Samsung Internet no admite la conexión física USB (WebUSB). Asegúrese de abrir <code>https://stnsebastian.github.io</code> en <strong>Google Chrome</strong>.
+            </div>
+            <div style="padding: 8px 10px; background: rgba(255,183,0,0.08); border-left: 3px solid var(--accent-amber); border-radius: 4px;">
+              <strong>2. Desactivar "Bloquear comandos por cable USB" (One UI 6.1):</strong><br>
+              Vaya a: <em>Ajustes ➔ Seguridad y privacidad ➔ Bloqueador automático</em>.<br>
+              Desactive la casilla <strong>"Bloquear comandos por cable USB"</strong> para permitir que Chrome envíe datos al lector.
+            </div>
+            <div style="padding: 8px 10px; background: rgba(0,255,136,0.08); border-left: 3px solid var(--accent-green); border-radius: 4px;">
+              <strong>3. Alimentación del Lector Óptico RealScan-D (500mA):</strong><br>
+              El prisma óptico consume 500mA. El puerto USB del Galaxy A06 entrega corriente limitada (~200mA). Si el lector queda con la luz roja fija, utilice un <strong>cable OTG en Y con cargador</strong> para alimentar el lector.
+            </div>
+            <div style="padding: 8px 10px; background: rgba(255,255,255,0.05); border-radius: 4px;">
+              <strong>4. Alternativa inmediata sin cables:</strong><br>
+              Utilice el <strong>Modo 3 (Touchless Macro)</strong> con la cámara de 50 MP y flash de su Galaxy A06, o el <strong>Modo 2 (Wi-Fi Bridge)</strong>.
+            </div>
+          </div>
+          <button id="btnAckSamsungHelp" class="btn-primary" style="margin-top: 10px; width: 100%;">
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Toast Notifications Area -->
     <div id="toast-container"></div>
   </div>
@@ -466,9 +510,23 @@
       }
       errBox.innerHTML = '<strong>❌ Error en app:</strong> ' + (e.message || e.error || 'Desconocido');
     });
+
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('[LiveScan Promise Rejection]', e);
+      var errBox = document.getElementById('debugErrorBanner');
+      if (!errBox) {
+        errBox = document.createElement('div');
+        errBox.id = 'debugErrorBanner';
+        errBox.style = 'position:fixed;bottom:62px;left:8px;right:8px;background:rgba(220,38,38,0.95);color:#fff;padding:10px 12px;border-radius:8px;font-size:11px;z-index:99999;font-family:monospace;border:1px solid #ff4444;box-shadow:0 4px 20px rgba(0,0,0,0.8);';
+        document.body.appendChild(errBox);
+      }
+      var reason = e.reason && e.reason.message ? e.reason.message : e.reason;
+      errBox.innerHTML = '<strong>⚠️ Aviso de Sistema:</strong> ' + (reason || 'Operación cancelada');
+      setTimeout(function() { if (errBox) errBox.remove(); }, 6000);
+    });
   </script>
 
   <!-- App Entry Script (Version Cache-Busted) -->
-  <script type="module" src="js/app.js?v=2.6"></script>
+  <script type="module" src="js/app.js?v=3.1"></script>
 </body>
 </html>

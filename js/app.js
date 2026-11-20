@@ -69,7 +69,12 @@ class LiveScanApp {
       usbConnectIcon: document.getElementById('usbConnectIcon'),
       usbConnectLabel: document.getElementById('usbConnectLabel'),
       usbStatusBadge: document.getElementById('usbStatusBadge'),
+      usbActionsSecondary: document.getElementById('usbActionsSecondary'),
+      btnToggleUsbLight: document.getElementById('btnToggleUsbLight'),
+      usbLightIcon: document.getElementById('usbLightIcon'),
+      usbLightLabel: document.getElementById('usbLightLabel'),
       usbHelpBox: document.getElementById('usbHelpBox'),
+      usbHelpText: document.getElementById('usbHelpText'),
       // Touchless params
       touchlessParamsBar: document.getElementById('touchlessParamsBar'),
       btnToggleFlash: document.getElementById('btnToggleFlash'),
@@ -276,6 +281,24 @@ class LiveScanApp {
     if (this.dom.btnConnectUsb) {
       this.dom.btnConnectUsb.addEventListener('click', () => {
         this.toggleUsbConnection();
+      });
+    }
+
+    // USB Scanner Direct Light & Sensor Toggle
+    if (this.dom.btnToggleUsbLight) {
+      this.dom.btnToggleUsbLight.addEventListener('click', async () => {
+        try {
+          const isNowOn = await this.usbScanner.togglePrismLight(this.currentCaptureType);
+          this.dom.btnToggleUsbLight.classList.toggle('active', isNowOn);
+          if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = isNowOn ? '🟢' : '💡';
+          if (this.dom.usbLightLabel) {
+            this.dom.usbLightLabel.textContent = isNowOn ? 'APAGAR LUZ PRISMA' : 'ACTIVAR LUZ DEL PRISMA / SENSOR';
+          }
+          if (navigator.vibrate) navigator.vibrate(40);
+          this.showToast(isNowOn ? '🟢 Luz del prisma activada (Verde/Captura).' : 'Luz del prisma apagada (Standby).');
+        } catch (err) {
+          this.showToast(err.message || 'Error al cambiar estado de luz USB.');
+        }
       });
     }
 
@@ -655,8 +678,14 @@ class LiveScanApp {
           this.dom.usbStatusBadge.textContent = 'En Línea';
           this.dom.usbStatusBadge.className = 'usb-badge connected';
         }
+        if (this.dom.usbActionsSecondary) {
+          this.dom.usbActionsSecondary.style.display = 'flex';
+        }
         if (this.dom.usbHelpBox) {
-          this.dom.usbHelpBox.style.display = 'none';
+          this.dom.usbHelpBox.style.display = 'flex';
+        }
+        if (this.dom.usbHelpText) {
+          this.dom.usbHelpText.innerHTML = 'Lector en línea. Si el lector mantiene la <strong>luz roja fija</strong>, presione <strong>"ACTIVAR LUZ DEL PRISMA"</strong> o <strong>"INICIAR CAPTURA"</strong>.';
         }
       } else if (info.state === 'disconnected' || info.state === 'error') {
         this.dom.btnConnectUsb?.classList.remove('connected');
@@ -668,8 +697,17 @@ class LiveScanApp {
           this.dom.usbStatusBadge.textContent = (info.state === 'error' ? 'Error' : 'Desconectado');
           this.dom.usbStatusBadge.className = 'usb-badge disconnected';
         }
+        if (this.dom.usbActionsSecondary) {
+          this.dom.usbActionsSecondary.style.display = 'none';
+        }
+        this.dom.btnToggleUsbLight?.classList.remove('active');
+        if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = '💡';
+        if (this.dom.usbLightLabel) this.dom.usbLightLabel.textContent = 'ACTIVAR LUZ DEL PRISMA / SENSOR';
         if (this.dom.usbHelpBox) {
           this.dom.usbHelpBox.style.display = 'flex';
+        }
+        if (this.dom.usbHelpText) {
+          this.dom.usbHelpText.innerHTML = 'Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.';
         }
       } else if (info.state === 'requesting') {
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '⏳';

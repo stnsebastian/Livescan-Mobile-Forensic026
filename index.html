@@ -172,9 +172,16 @@
               </button>
               <span id="usbStatusBadge" class="usb-badge disconnected">Desconectado</span>
             </div>
+            <!-- Secondary USB Actions (Manual Light & Sensor Activation) -->
+            <div id="usbActionsSecondary" class="usb-actions-secondary" style="display: none;">
+              <button id="btnToggleUsbLight" class="btn-usb-light" type="button" title="Activar / Probar Luz del Prisma Óptico">
+                <span id="usbLightIcon">💡</span>
+                <span id="usbLightLabel">ACTIVAR LUZ DEL PRISMA / SENSOR</span>
+              </button>
+            </div>
             <div id="usbHelpBox" class="usb-help-box">
               <span class="help-icon">💡</span>
-              <span class="help-text">Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.</span>
+              <span class="help-text" id="usbHelpText">Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.</span>
             </div>
           </div>
 

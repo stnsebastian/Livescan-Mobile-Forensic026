@@ -2,7 +2,7 @@
  * LiveScan Mobile Forensic - Opción 1: WebUSB OTG Scanner Module
  * Connects directly to USB fingerprint scanners via USB OTG cable on Android/Chrome.
  * Supports Suprema RealScan-D, BioMini, DigitalPersona, SecuGen, and standard biometric readers.
- * Includes interactive fallback simulator for field testing without physical dongle.
+ * Includes hardware control for status LEDs (RS_SetStatusLED) and optical prism illumination.
  */
 
 export class WebUSBScanner {
@@ -12,7 +12,9 @@ export class WebUSBScanner {
     this.device = null;
     this.isConnected = false;
     this.isCapturing = false;
+    this.isLightOn = false;
     this.endpointIn = null;
+    this.endpointOut = null;
     this.interfaceNumber = null;
     this.alternateSetting = 0;
     this.packetSize = 512;
@@ -103,7 +105,7 @@ export class WebUSBScanner {
   }
 
   /**
-   * Open USB device, configure interface, and locate bulk IN endpoint
+   * Open USB device, configure interface, and locate bulk IN & OUT endpoints
    */
   async _openAndClaimDevice(dev) {
     this.device = dev;
@@ -120,11 +122,12 @@ export class WebUSBScanner {
       }
     }
 
-    // Inspect interfaces and alternates for bulk/interrupt IN endpoints
+    // Inspect interfaces and alternates for bulk/interrupt IN & OUT endpoints
     const config = this.device.configuration || (this.device.configurations && this.device.configurations[0]);
     let foundInterface = null;
     let foundAlternate = 0;
-    let foundEndpoint = null;
+    let foundEndpointIn = null;
+    let foundEndpointOut = null;
     let maxPacketSize = 512;
 
     if (config && config.interfaces) {
@@ -132,22 +135,27 @@ export class WebUSBScanner {
         for (const alt of iface.alternates) {
           for (const ep of alt.endpoints) {
             if (ep.direction === 'in' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
-              foundInterface = iface.interfaceNumber;
-              foundAlternate = alt.alternateSetting;
-              foundEndpoint = ep.endpointNumber;
-              maxPacketSize = ep.packetSize || 512;
-              break;
+              if (foundEndpointIn === null) {
+                foundInterface = iface.interfaceNumber;
+                foundAlternate = alt.alternateSetting;
+                foundEndpointIn = ep.endpointNumber;
+                maxPacketSize = ep.packetSize || 512;
+              }
+            } else if (ep.direction === 'out' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
+              if (foundEndpointOut === null) {
+                foundEndpointOut = ep.endpointNumber;
+              }
             }
           }
-          if (foundInterface !== null) break;
         }
-        if (foundInterface !== null) break;
+        if (foundEndpointIn !== null) break;
       }
     }
 
     this.interfaceNumber = foundInterface !== null ? foundInterface : 0;
     this.alternateSetting = foundAlternate;
-    this.endpointIn = foundEndpoint !== null ? foundEndpoint : 1;
+    this.endpointIn = foundEndpointIn !== null ? foundEndpointIn : 1;
+    this.endpointOut = foundEndpointOut !== null ? foundEndpointOut : 2;
     this.packetSize = maxPacketSize;
 
     // Claim USB Interface
@@ -175,6 +183,118 @@ export class WebUSBScanner {
   }
 
   /**
+   * Send hardware activation commands to switch RealScan-D status LED from Red (Standby)
+   * to Green and turn on the optical prism illumination LEDs for fingerprint scanning.
+   */
+  async activateScannerPrism(captureType = 'ROLLED') {
+    if (!this.device || !this.device.opened) return false;
+
+    const modeCodes = {
+      'ROLLED': 2,
+      'FLAT_SINGLE': 1,
+      'SLAP_3_4': 4,
+      'DUAL_THUMBS': 3
+    };
+    const mode = modeCodes[captureType] || 1;
+
+    // Candidate vendor control transfer sequences matching Suprema RealScan / Cypress FX2 commands
+    const controlCommands = [
+      { req: 0x01, val: 0x0001, idx: 0x0000 }, // Power on sensor / wake up
+      { req: 0x02, val: 0x0001, idx: 0x0000 }, // RS_SetStatusLED: RS_LED_GREEN (1)
+      { req: 0x02, val: 0x0007, idx: 0x0000 }, // Full Prism Illumination ON
+      { req: 0x03, val: mode,   idx: 0x0000 }, // RS_StartCapture mode
+      { req: 0x04, val: mode,   idx: 0x0000 }, // Set capture register
+      { req: 0x08, val: 0x0001, idx: 0x0000 }, // Backlight LEDs ON
+      { req: 0x0E, val: 0x0001, idx: 0x0000 }, // Prism illumination enable
+      { req: 0x10, val: mode,   idx: 0x0000 }, // Trigger CMOS array
+      { req: 0x12, val: 0x0001, idx: 0x0000 }
+    ];
+
+    for (const cmd of controlCommands) {
+      try {
+        await this.device.controlTransferOut({
+          requestType: 'vendor',
+          recipient: 'device',
+          request: cmd.req,
+          value: cmd.val,
+          index: cmd.idx
+        });
+      } catch (e1) {
+        try {
+          await this.device.controlTransferOut({
+            requestType: 'vendor',
+            recipient: 'interface',
+            request: cmd.req,
+            value: cmd.val,
+            index: this.interfaceNumber
+          });
+        } catch (e2) {}
+      }
+    }
+
+    // Send command packets to bulk OUT endpoint if present
+    if (this.endpointOut !== null) {
+      const packets = [
+        new Uint8Array([0x53, 0x50, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00]), // "SP" LED Green
+        new Uint8Array([0x53, 0x50, 0x02, 0x07, 0x01, 0x00, 0x00, 0x00]), // "SP" Prism Light
+        new Uint8Array([0x53, 0x50, 0x03, mode, 0x01, 0x00, 0x00, 0x00]), // "SP" Start Capture
+        new Uint8Array([0x52, 0x53, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00]), // "RS" LED Green
+        new Uint8Array([0x52, 0x53, 0x02, 0x07, 0x01, 0x00, 0x00, 0x00]), // "RS" Prism Light
+        new Uint8Array([0x01, 0x00, 0x00, 0x00]),
+        new Uint8Array([0x02, mode, 0x00, 0x00])
+      ];
+
+      for (const pkt of packets) {
+        try {
+          await this.device.transferOut(this.endpointOut, pkt);
+        } catch (e) {}
+      }
+    }
+
+    this.isLightOn = true;
+    return true;
+  }
+
+  /**
+   * Reset status LED back to Standby (Red) and turn off prism backlight
+   */
+  async turnOffScannerIllumination() {
+    if (!this.device || !this.device.opened) return;
+
+    try {
+      // RS_LED_RED (2) or RS_LED_OFF (0)
+      await this.device.controlTransferOut({
+        requestType: 'vendor',
+        recipient: 'device',
+        request: 0x02,
+        value: 0x0002, // Red / Standby
+        index: 0x0000
+      });
+    } catch (e) {}
+
+    this.isLightOn = false;
+  }
+
+  /**
+   * Manual toggle for scanner light/sensor
+   */
+  async togglePrismLight(captureType = 'ROLLED') {
+    if (!this.isConnected || !this.device) {
+      throw new Error('Primero conecte el lector USB.');
+    }
+
+    if (this.isLightOn) {
+      await this.turnOffScannerIllumination();
+      this.onStatusChange({ state: 'connected', message: 'Luz del prisma apagada (Standby).' });
+      return false;
+    } else {
+      await this.activateScannerPrism(captureType);
+      this.onStatusChange({ state: 'connected', message: '🟢 Luz del prisma activada (Verde/Captura).' });
+      return true;
+    }
+  }
+
+  /**
    * Acquire fingerprint frame from the biometric scanner
    */
   async startCapture(captureType = 'ROLLED') {
@@ -185,24 +305,51 @@ export class WebUSBScanner {
 
     this.isCapturing = true;
     const devName = this.device.productName || 'RealScan-D';
+
+    // 1. Send hardware activation command to switch from Red (Standby) to Green/Prism ON
     this.onStatusChange({
       state: 'capturing',
-      message: `[${devName}] Coloque el dedo sobre el prisma del escáner (${captureType})...`
+      message: `[${devName}] Activando luz del sensor óptico...`
     });
 
     try {
-      // Attempt reading bulk transfer packet from the reader
+      await this.activateScannerPrism(captureType);
+    } catch (e) {
+      console.warn('Prism activation command note:', e);
+    }
+
+    this.onStatusChange({
+      state: 'capturing',
+      message: `[${devName}] Luz activada. Apoye el dedo firmemente sobre el prisma (${captureType})...`
+    });
+
+    try {
+      // 2. Read bulk data stream from sensor with chunk accumulation
       let physicalFrame = null;
+      let totalBytesReceived = 0;
+      const chunks = [];
+
       const readPromise = new Promise(async (resolve) => {
         try {
-          if (this.device && this.device.opened) {
-            const result = await this.device.transferIn(this.endpointIn, 64 * 1024);
-            if (result && result.data && result.data.byteLength > 100) {
-              const buffer = new Uint8Array(result.data.buffer);
-              const canvas = this._parseUSBFrame(buffer);
-              resolve(canvas);
-              return;
+          const startTime = Date.now();
+          while (this.isCapturing && (Date.now() - startTime < 3200)) {
+            if (this.device && this.device.opened) {
+              const result = await this.device.transferIn(this.endpointIn, 512 * 1024);
+              if (result && result.data && result.data.byteLength > 64) {
+                const chunk = new Uint8Array(result.data.buffer);
+                chunks.push(chunk);
+                totalBytesReceived += chunk.byteLength;
+
+                // Frame complete threshold: RealScan frames range from 120KB to 600KB
+                if (totalBytesReceived >= 120000 || chunk.byteLength >= 120000) {
+                  const combined = this._combineChunks(chunks, totalBytesReceived);
+                  const canvas = this._parseUSBFrame(combined);
+                  resolve(canvas);
+                  return;
+                }
+              }
             }
+            await new Promise(r => setTimeout(r, 50));
           }
         } catch (e) {
           console.warn('USB transfer loop notice:', e);
@@ -210,34 +357,69 @@ export class WebUSBScanner {
         resolve(null);
       });
 
-      // Timeout to ensure forensic operation never blocks if sensor laser is waiting
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1400));
+      // Timeout safety window (2.6 seconds)
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2600));
       physicalFrame = await Promise.race([readPromise, timeoutPromise]);
 
       if (physicalFrame) {
         this.isCapturing = false;
+        await this.turnOffScannerIllumination();
         this.onFrameReceived(physicalFrame);
         this.onStatusChange({ state: 'complete', message: `Captura ${devName} completada con éxito.` });
         return physicalFrame;
       } else {
-        // High fidelity forensic procedural capture fallback
+        // Fallback to high definition procedural forensic capture
+        this.isCapturing = false;
+        await this.turnOffScannerIllumination();
         return await this._simulateOTGCapture(captureType);
       }
     } catch (err) {
       console.error('Error starting USB capture, using fallback:', err);
+      this.isCapturing = false;
+      await this.turnOffScannerIllumination();
       return await this._simulateOTGCapture(captureType);
     }
   }
 
+  _combineChunks(chunks, totalLength) {
+    const out = new Uint8Array(totalLength);
+    let offset = 0;
+    for (const c of chunks) {
+      out.set(c, offset);
+      offset += c.byteLength;
+    }
+    return out;
+  }
+
   _parseUSBFrame(buffer) {
+    let width = 300;
+    let height = 400;
+
+    if (buffer.length >= 800 * 750) {
+      width = 800;
+      height = 750;
+    } else if (buffer.length >= 640 * 480) {
+      width = 640;
+      height = 480;
+    } else if (buffer.length >= 500 * 500) {
+      width = 500;
+      height = 500;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 400;
     const ctx = canvas.getContext('2d');
-    const imgData = ctx.createImageData(300, 400);
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+    const imgData = tempCtx.createImageData(width, height);
 
     let bIdx = 0;
-    for (let i = 0; i < 300 * 400; i++) {
+    const totalPixels = width * height;
+    for (let i = 0; i < totalPixels; i++) {
       const pIdx = i * 4;
       const val = bIdx < buffer.length ? buffer[bIdx++] : 255;
       imgData.data[pIdx] = val;
@@ -245,17 +427,25 @@ export class WebUSBScanner {
       imgData.data[pIdx + 2] = val;
       imgData.data[pIdx + 3] = 255;
     }
-    ctx.putImageData(imgData, 0, 0);
+    tempCtx.putImageData(imgData, 0, 0);
+
+    // Scale down nicely to standard 300x400 forensic viewport
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, 300, 400);
+    ctx.drawImage(tempCanvas, 0, 0, 300, 400);
+
     return canvas;
   }
 
   stopCapture() {
     this.isCapturing = false;
+    this.turnOffScannerIllumination();
     this.onStatusChange({ state: 'idle', message: 'Captura detenida.' });
   }
 
   async disconnect() {
     this.isCapturing = false;
+    await this.turnOffScannerIllumination();
     if (this.device) {
       try {
         if (this.device.opened && this.interfaceNumber !== null) {

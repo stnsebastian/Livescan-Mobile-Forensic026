@@ -224,6 +224,18 @@
   color: #059669;
 }
 
+[data-theme="light"] .btn-usb-light {
+  background: #fef3c7;
+  border-color: #d97706;
+  color: #b45309;
+}
+
+[data-theme="light"] .btn-usb-light.active {
+  background: #dcfce7;
+  border-color: #059669;
+  color: #059669;
+}
+
 [data-theme="light"] .usb-help-box {
   background: #fffbeb;
   border-color: #f59e0b;
@@ -966,6 +978,42 @@ html, body {
 
 .btn-usb-action.connected {
   background: rgba(0, 255, 136, 0.18);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  box-shadow: 0 0 10px var(--accent-green-glow);
+}
+
+.usb-actions-secondary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn-usb-light {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(255, 183, 0, 0.15);
+  border: 1px solid var(--accent-amber);
+  color: var(--accent-amber);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-usb-light:active {
+  transform: scale(0.98);
+}
+
+.btn-usb-light.active {
+  background: rgba(0, 255, 136, 0.22);
   border-color: var(--accent-green);
   color: var(--accent-green);
   box-shadow: 0 0 10px var(--accent-green-glow);

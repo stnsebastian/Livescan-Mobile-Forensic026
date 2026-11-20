@@ -177,8 +177,8 @@
                 <span id="usbConnectIcon">🔌</span>
                 <span id="usbConnectLabel">CONECTAR LECTOR USB (REALSCAN-D)</span>
               </button>
-              <button id="btnSamsungHelp" class="btn-samsung-help" type="button" title="Guía para Samsung A06">
-                📱 Samsung A06
+              <button id="btnAndroidHelp" class="btn-samsung-help" type="button" title="Guía de Compatibilidad Android (Tablets y Celulares)">
+                📱 Tablet / Celular
               </button>
               <span id="usbStatusBadge" class="usb-badge disconnected">Desconectado</span>
             </div>
@@ -459,31 +459,33 @@
       </div>
     </div>
 
-    <!-- Modal: Guía de Compatibilidad Samsung Galaxy A06 -->
+    <!-- Modal: Guía de Compatibilidad Universal Android (Tablets y Celulares) -->
     <div id="samsungHelpModal" class="modal-overlay">
       <div class="modal-bottom-sheet">
         <div class="modal-header">
-          <h3 class="modal-title">📱 Guía Samsung Galaxy A06</h3>
+          <h3 class="modal-title">📱 Compatibilidad Android (Tablets y Celulares)</h3>
           <button id="btnCloseSamsungModal" class="btn-secondary" style="padding: 4px;">✕</button>
         </div>
         <div class="modal-body">
           <div style="font-size: 11.5px; line-height: 1.5; color: var(--text-main); display: flex; flex-direction: column; gap: 8px;">
             <div style="padding: 8px 10px; background: rgba(0,229,255,0.08); border-left: 3px solid var(--accent-cyan); border-radius: 4px;">
-              <strong>1. Usar Google Chrome en su Galaxy A06:</strong><br>
-              Samsung Internet no admite la conexión física USB (WebUSB). Asegúrese de abrir <code>https://stnsebastian.github.io</code> en <strong>Google Chrome</strong>.
-            </div>
-            <div style="padding: 8px 10px; background: rgba(255,183,0,0.08); border-left: 3px solid var(--accent-amber); border-radius: 4px;">
-              <strong>2. Desactivar "Bloquear comandos por cable USB" (One UI 6.1):</strong><br>
-              Vaya a: <em>Ajustes ➔ Seguridad y privacidad ➔ Bloqueador automático</em>.<br>
-              Desactive la casilla <strong>"Bloquear comandos por cable USB"</strong> para permitir que Chrome envíe datos al lector.
+              <strong>1. Navegador Estándar Recomendado:</strong><br>
+              Tanto en tablets como en celulares Android, abra la app en <strong>Google Chrome</strong> o <strong>Microsoft Edge</strong> (los navegadores de fábrica como Samsung Internet no incluyen soporte WebUSB).
             </div>
             <div style="padding: 8px 10px; background: rgba(0,255,136,0.08); border-left: 3px solid var(--accent-green); border-radius: 4px;">
-              <strong>3. Alimentación del Lector Óptico RealScan-D (500mA):</strong><br>
-              El prisma óptico consume 500mA. El puerto USB del Galaxy A06 entrega corriente limitada (~200mA). Si el lector queda con la luz roja fija, utilice un <strong>cable OTG en Y con cargador</strong> para alimentar el lector.
+              <strong>2. Tablets Android (Lenovo, Galaxy Tab, Xiaomi Pad, etc.):</strong><br>
+              Las tablets tienen baterías grandes y puertos USB-C que entregan hasta 900mA (suficiente para el lector). Si la tablet es básica y el lector queda con luz roja, use un <strong>Hub USB-C o cable OTG en Y con cargador</strong>.
+            </div>
+            <div style="padding: 8px 10px; background: rgba(255,183,0,0.08); border-left: 3px solid var(--accent-amber); border-radius: 4px;">
+              <strong>3. Ajustes de Seguridad por Fabricante:</strong><br>
+              • <strong>Samsung (Tab / Celular):</strong> En <em>Ajustes ➔ Seguridad ➔ Bloqueador automático</em>, desactive <em>"Bloquear comandos por cable USB"</em>.<br>
+              • <strong>Xiaomi / Redmi / POCO:</strong> En <em>Ajustes ➔ Ajustes adicionales</em>, active la opción <em>"Conexión OTG"</em>.<br>
+              • <strong>OPPO / Realme:</strong> En <em>Ajustes ➔ Ajustes del sistema</em>, active <em>"Conexión OTG"</em>.<br>
+              • <strong>Lenovo / Motorola / Android Puro:</strong> Conexión automática Plug & Play.
             </div>
             <div style="padding: 8px 10px; background: rgba(255,255,255,0.05); border-radius: 4px;">
-              <strong>4. Alternativa inmediata sin cables:</strong><br>
-              Utilice el <strong>Modo 3 (Touchless Macro)</strong> con la cámara de 50 MP y flash de su Galaxy A06, o el <strong>Modo 2 (Wi-Fi Bridge)</strong>.
+              <strong>4. Modo Autónomo sin cables:</strong><br>
+              En cualquier tablet o celular con cámara, puede usar el <strong>Modo 3 (Touchless Macro)</strong> o el <strong>Modo 2 (Wi-Fi Bridge)</strong>.
             </div>
           </div>
           <button id="btnAckSamsungHelp" class="btn-primary" style="margin-top: 10px; width: 100%;">
@@ -527,6 +529,6 @@
   </script>
 
   <!-- App Entry Script (Version Cache-Busted) -->
-  <script type="module" src="js/app.js?v=3.2"></script>
+  <script type="module" src="js/app.js?v=3.3"></script>
 </body>
 </html>

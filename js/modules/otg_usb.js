@@ -31,10 +31,47 @@ export class WebUSBScanner {
       { vendorId: 0x10c4 }, // Silicon Labs USB Bridge
       { vendorId: 0x0403 }  // FTDI USB Serial / Bridge
     ];
+
+    // Auto-detect plug/unplug events on Android tablets & phones
+    this.initDeviceListeners();
   }
 
   isSupported() {
     return typeof navigator !== 'undefined' && 'usb' in navigator && !!navigator.usb;
+  }
+
+  /**
+   * Listen for USB connect/disconnect events on Android tablets & phones
+   */
+  initDeviceListeners() {
+    if (!this.isSupported()) return;
+    try {
+      navigator.usb.addEventListener('connect', async (event) => {
+        console.log('[WebUSB Android Tablet/Phone] Dispositivo conectado:', event.device);
+        this.onStatusChange({
+          state: 'requesting',
+          message: `Dispositivo ${event.device.productName || 'USB'} detectado en la tablet. Conectando...`
+        });
+        try {
+          await this._openAndClaimDevice(event.device);
+        } catch (e) {
+          console.warn('Auto-claim on connect notice:', e);
+        }
+      });
+
+      navigator.usb.addEventListener('disconnect', (event) => {
+        console.log('[WebUSB Android Tablet/Phone] Dispositivo desconectado:', event.device);
+        if (this.device === event.device) {
+          this.disconnect();
+          this.onStatusChange({
+            state: 'disconnected',
+            message: 'Escáner USB desconectado.'
+          });
+        }
+      });
+    } catch (e) {
+      console.warn('USB listener registration notice:', e);
+    }
   }
 
   getSupportDiagnostic() {

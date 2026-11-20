@@ -1728,3 +1728,95 @@ html, body {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ==========================================================================
+   TABLET & MULTI-DEVICE RESPONSIVE ENHANCEMENTS (Android Tablets & Large Phones)
+   Supports 7", 8", 10", 11", 12.4" screens, foldables, and landscape docks
+   ========================================================================== */
+
+@media (min-width: 768px) {
+  /* Tablet Header */
+  .top-header {
+    height: 60px;
+    padding: 0 24px;
+  }
+
+  .brand-title {
+    font-size: 16px;
+  }
+
+  .officer-banner-yellow {
+    font-size: 12px;
+    padding: 6px 24px;
+  }
+
+  .tactical-dropdowns-bar {
+    padding: 8px 24px;
+    gap: 14px;
+  }
+
+  .dropdown-trigger {
+    padding: 9px 14px;
+    font-size: 12px;
+  }
+
+  /* Canvases on Tablets */
+  .canvas-wrapper {
+    padding: 20px;
+  }
+
+  /* Database Grid on Tablets */
+  .records-list {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  /* Match View Expanded on Tablets */
+  .dual-viewport-container {
+    max-width: 720px;
+    margin: 0 auto;
+    gap: 20px;
+  }
+
+  .match-box {
+    flex: 1;
+  }
+
+  .match-canvas {
+    width: 100% !important;
+    max-width: 300px !important;
+    height: auto !important;
+  }
+}
+
+/* Tablet Landscape Workstation Mode */
+@media (min-width: 768px) and (orientation: landscape) {
+  #tabCapture.active {
+    display: grid !important;
+    grid-template-columns: 1fr 390px;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .tactical-dropdowns-bar {
+    grid-column: 1 / -1;
+  }
+
+  .viewport-panel {
+    grid-column: 1;
+    height: 100%;
+    border-right: 1px solid var(--border-color);
+  }
+
+  .capture-controls {
+    grid-column: 2;
+    height: 100%;
+    overflow-y: auto;
+    border-top: none;
+    border-left: 1px solid var(--border-color);
+    justify-content: center;
+    padding: 16px 20px;
+  }
+}

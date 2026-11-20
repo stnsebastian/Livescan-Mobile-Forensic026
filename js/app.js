@@ -74,7 +74,8 @@ class LiveScanApp {
       usbLightIcon: document.getElementById('usbLightIcon'),
       usbLightLabel: document.getElementById('usbLightLabel'),
       btnDirectUsbCapture: document.getElementById('btnDirectUsbCapture'),
-      btnSamsungHelp: document.getElementById('btnSamsungHelp'),
+      btnAndroidHelp: document.getElementById('btnAndroidHelp') || document.getElementById('btnSamsungHelp'),
+      btnSamsungHelp: document.getElementById('btnSamsungHelp') || document.getElementById('btnAndroidHelp'),
       samsungBrowserBanner: document.getElementById('samsungBrowserBanner'),
       btnCloseSamsungBanner: document.getElementById('btnCloseSamsungBanner'),
       samsungHelpModal: document.getElementById('samsungHelpModal'),
@@ -298,11 +299,13 @@ class LiveScanApp {
       });
     }
 
-    // Samsung Galaxy A06 Guidance Modal Events
-    if (this.dom.btnSamsungHelp) {
-      this.dom.btnSamsungHelp.addEventListener('click', () => {
-        this.dom.samsungHelpModal?.classList.add('active');
-      });
+    // Android / Tablet / Samsung Guidance Modal Events
+    const triggerHelpModal = () => {
+      this.dom.samsungHelpModal?.classList.add('active');
+    };
+    if (this.dom.btnAndroidHelp) this.dom.btnAndroidHelp.addEventListener('click', triggerHelpModal);
+    if (this.dom.btnSamsungHelp && this.dom.btnSamsungHelp !== this.dom.btnAndroidHelp) {
+      this.dom.btnSamsungHelp.addEventListener('click', triggerHelpModal);
     }
 
     if (this.dom.btnCloseSamsungModal) {

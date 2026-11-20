@@ -133,12 +133,6 @@ export class WebUSBScanner {
       });
       throw new Error(userMsg);
     }
-      this.onStatusChange({
-        state: 'error',
-        message: err.message || 'Error al conectar el escáner USB.'
-      });
-      throw err;
-    }
   }
 
   /**

@@ -63,6 +63,13 @@ class LiveScanApp {
       hudNfiq: document.getElementById('hudNfiq'),
       hudMinutiaeCount: document.getElementById('hudMinutiaeCount'),
       layerBtns: document.querySelectorAll('.layer-btn'),
+      // USB params & connect
+      usbControlsBar: document.getElementById('usbControlsBar'),
+      btnConnectUsb: document.getElementById('btnConnectUsb'),
+      usbConnectIcon: document.getElementById('usbConnectIcon'),
+      usbConnectLabel: document.getElementById('usbConnectLabel'),
+      usbStatusBadge: document.getElementById('usbStatusBadge'),
+      usbHelpBox: document.getElementById('usbHelpBox'),
       // Touchless params
       touchlessParamsBar: document.getElementById('touchlessParamsBar'),
       btnToggleFlash: document.getElementById('btnToggleFlash'),
@@ -161,6 +168,15 @@ class LiveScanApp {
       console.warn('SW register warning:', e);
     }
 
+    // Auto-detect previously paired USB scanner (e.g. RealScan-D)
+    if (this.activeMode === 'usb') {
+      try {
+        await this.usbScanner.checkAutoConnect();
+      } catch (e) {
+        console.warn('Auto USB connect notice:', e);
+      }
+    }
+
     if (!navigator.onLine) {
       this.setStatus('active', 'Modo Autónomo (Offline)');
       this.showToast('Modo Autónomo: Operando 100% sin internet.');
@@ -255,6 +271,13 @@ class LiveScanApp {
     this.dom.btnMainCapture.addEventListener('click', () => {
       this.toggleCapture();
     });
+
+    // USB Scanner Direct Connection Button
+    if (this.dom.btnConnectUsb) {
+      this.dom.btnConnectUsb.addEventListener('click', () => {
+        this.toggleUsbConnection();
+      });
+    }
 
     // Touchless Flash/Torch Control
     this.dom.btnToggleFlash.addEventListener('click', async () => {
@@ -436,6 +459,11 @@ class LiveScanApp {
     this.dom.touchlessReticle.classList.toggle('active', mode === 'touchless');
     this.dom.scannerVideo.style.display = 'none';
 
+    // USB Dynamic Controls Bar visibility
+    if (this.dom.usbControlsBar) {
+      this.dom.usbControlsBar.style.display = (mode === 'usb') ? 'flex' : 'none';
+    }
+
     // Hide the 4 Biometric Scanner modalities dropdown when Touchless is active, show on USB / Wi-Fi
     if (this.dom.dropdownModality) {
       this.dom.dropdownModality.style.display = (mode === 'touchless') ? 'none' : 'block';
@@ -511,6 +539,24 @@ class LiveScanApp {
 
     if (navigator.vibrate) navigator.vibrate(30);
     this.showToast(`Modo: ${label}`);
+  }
+
+  async toggleUsbConnection() {
+    if (this.usbScanner.isConnected) {
+      await this.usbScanner.disconnect();
+      this.showToast('Lector USB desconectado.');
+    } else {
+      this.showToast('👉 Toque "RealScan-D" en la lista de la ventana y presione "Conectar".', 5000);
+      try {
+        await this.usbScanner.connect();
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+        this.showToast('🟢 Lector RealScan-D conectado y sincronizado.');
+      } catch (err) {
+        if (err && err.message) {
+          this.showToast(err.message, 4000);
+        }
+      }
+    }
   }
 
   async toggleCapture() {
@@ -594,6 +640,47 @@ class LiveScanApp {
       this.dom.statusDot.className = 'status-dot warning';
     } else if (info.state === 'error' || info.state === 'disconnected') {
       this.dom.statusDot.className = 'status-dot danger';
+    }
+
+    // USB Dynamic visual feedback
+    if (source === 'USB') {
+      if (info.state === 'connected') {
+        this.dom.btnConnectUsb?.classList.add('connected');
+        if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '🟢';
+        if (this.dom.usbConnectLabel) {
+          const devTitle = info.deviceName ? info.deviceName.toUpperCase() : 'REALSCAN-D';
+          this.dom.usbConnectLabel.textContent = `${devTitle} CONECTADO`;
+        }
+        if (this.dom.usbStatusBadge) {
+          this.dom.usbStatusBadge.textContent = 'En Línea';
+          this.dom.usbStatusBadge.className = 'usb-badge connected';
+        }
+        if (this.dom.usbHelpBox) {
+          this.dom.usbHelpBox.style.display = 'none';
+        }
+      } else if (info.state === 'disconnected' || info.state === 'error') {
+        this.dom.btnConnectUsb?.classList.remove('connected');
+        if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '🔌';
+        if (this.dom.usbConnectLabel) {
+          this.dom.usbConnectLabel.textContent = 'CONECTAR LECTOR USB (REALSCAN-D)';
+        }
+        if (this.dom.usbStatusBadge) {
+          this.dom.usbStatusBadge.textContent = (info.state === 'error' ? 'Error' : 'Desconectado');
+          this.dom.usbStatusBadge.className = 'usb-badge disconnected';
+        }
+        if (this.dom.usbHelpBox) {
+          this.dom.usbHelpBox.style.display = 'flex';
+        }
+      } else if (info.state === 'requesting') {
+        if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '⏳';
+        if (this.dom.usbConnectLabel) {
+          this.dom.usbConnectLabel.textContent = 'SELECCIONE REALSCAN-D...';
+        }
+        if (this.dom.usbStatusBadge) {
+          this.dom.usbStatusBadge.textContent = 'Vinculando';
+          this.dom.usbStatusBadge.className = 'usb-badge warning';
+        }
+      }
     }
 
     // Touchless Reticle visual feedback

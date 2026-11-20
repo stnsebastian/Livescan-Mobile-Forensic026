@@ -163,6 +163,21 @@
 
         <!-- Capture Bottom Action Section -->
         <div class="capture-controls">
+          <!-- USB Scanner Dynamic Controls -->
+          <div id="usbControlsBar" class="usb-controls-bar">
+            <div class="usb-controls-header">
+              <button id="btnConnectUsb" class="btn-usb-action" type="button" title="Conectar / Emparejar Lector USB">
+                <span id="usbConnectIcon">🔌</span>
+                <span id="usbConnectLabel">CONECTAR LECTOR USB (REALSCAN-D)</span>
+              </button>
+              <span id="usbStatusBadge" class="usb-badge disconnected">Desconectado</span>
+            </div>
+            <div id="usbHelpBox" class="usb-help-box">
+              <span class="help-icon">💡</span>
+              <span class="help-text">Al presionar, <strong>toque el texto "RealScan-D"</strong> en la lista para marcarlo y luego pulse <strong>"Conectar"</strong>.</span>
+            </div>
+          </div>
+
           <!-- Touchless Camera Dynamic Controls -->
           <div id="touchlessParamsBar" class="touchless-params">
             <button id="btnToggleFlash" class="btn-icon-toggle">

@@ -3,7 +3,7 @@
  * Garantiza funcionamiento pericial completo en terreno sin señal celular ni internet.
  */
 
-const CACHE_NAME = 'livescan-mobile-v2.6';
+const CACHE_NAME = 'livescan-mobile-v2.7';
 
 // Recursos críticos indispensables para arranque offline
 const CORE_ASSETS = [

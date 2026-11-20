@@ -207,6 +207,29 @@
   border-top: 1px solid #cbd5e1;
 }
 
+[data-theme="light"] .usb-controls-bar {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .btn-usb-action {
+  background: rgba(2, 132, 199, 0.1);
+  border-color: #0284c7;
+  color: #0284c7;
+}
+
+[data-theme="light"] .btn-usb-action.connected {
+  background: rgba(5, 150, 105, 0.15);
+  border-color: #059669;
+  color: #059669;
+}
+
+[data-theme="light"] .usb-help-box {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #92400e;
+}
+
 [data-theme="light"] .touchless-params {
   background: #f1f5f9;
   border-color: #cbd5e1;
@@ -898,6 +921,103 @@ html, body {
   flex-direction: column;
   gap: 10px;
   z-index: 30;
+}
+
+/* USB Scanner Dynamic Controls Sub-bar */
+.usb-controls-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+}
+
+.usb-controls-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.btn-usb-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 229, 255, 0.12);
+  border: 1px solid var(--accent-cyan);
+  color: var(--accent-cyan);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.btn-usb-action:active {
+  transform: scale(0.98);
+}
+
+.btn-usb-action.connected {
+  background: rgba(0, 255, 136, 0.18);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+  box-shadow: 0 0 10px var(--accent-green-glow);
+}
+
+.usb-badge {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.usb-badge.disconnected {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.usb-badge.connected {
+  background: rgba(0, 255, 136, 0.2);
+  color: var(--accent-green);
+  border: 1px solid var(--accent-green);
+}
+
+.usb-badge.warning {
+  background: rgba(255, 183, 0, 0.2);
+  color: var(--accent-amber);
+  border: 1px solid var(--accent-amber);
+}
+
+.usb-help-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: #ffb700;
+  background: rgba(255, 183, 0, 0.08);
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 183, 0, 0.35);
+}
+
+.usb-help-box .help-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.usb-help-box .help-text {
+  line-height: 1.35;
 }
 
 /* Touchless Camera Parameters Sub-bar */

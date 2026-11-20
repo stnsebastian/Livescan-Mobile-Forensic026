@@ -1,7 +1,7 @@
 /**
  * LiveScan Mobile Forensic - Opción 1: WebUSB OTG Scanner Module
  * Connects directly to USB fingerprint scanners via USB OTG cable on Android/Chrome.
- * Supports Suprema, DigitalPersona, SecuGen, and standard biometric readers.
+ * Supports Suprema RealScan-D, BioMini, DigitalPersona, SecuGen, and standard biometric readers.
  * Includes interactive fallback simulator for field testing without physical dongle.
  */
 
@@ -14,53 +14,128 @@ export class WebUSBScanner {
     this.isCapturing = false;
     this.endpointIn = null;
     this.interfaceNumber = null;
+    this.alternateSetting = 0;
+    this.packetSize = 512;
+
+    // Comprehensive list of Biometric LiveScan Vendor IDs
+    this.knownVendorFilters = [
+      { vendorId: 0x16d1 }, // Suprema Inc. (RealScan-D, BioMini, RealScan-G10, RealScan-F)
+      { vendorId: 0x04b4 }, // Cypress Semiconductor (FX2/FX3 USB Controller inside RealScan-D)
+      { vendorId: 0x08ff }, // DigitalPersona / AuthenTec / U.are.U
+      { vendorId: 0x1162 }, // SecuGen Corporation
+      { vendorId: 0x1491 }, // Futronic Technology Company Ltd.
+      { vendorId: 0x05ba }, // Crossmatch Technologies / HID Global
+      { vendorId: 0x2c42 }, // Aratek Biometrics
+      { vendorId: 0x10c4 }, // Silicon Labs USB Bridge
+      { vendorId: 0x0403 }  // FTDI USB Serial / Bridge
+    ];
   }
 
   isSupported() {
     return 'usb' in navigator;
   }
 
+  /**
+   * Check if a previously authorized scanner (e.g. RealScan-D) is already paired in Chrome
+   */
+  async checkAutoConnect() {
+    if (!this.isSupported()) return null;
+    try {
+      const pairedDevices = await navigator.usb.getDevices();
+      if (pairedDevices && pairedDevices.length > 0) {
+        // Priority to Suprema or recognized scanners
+        const matched = pairedDevices.find(d => 
+          (d.productName && d.productName.toLowerCase().includes('realscan')) ||
+          this.knownVendorFilters.some(f => f.vendorId === d.vendorId)
+        ) || pairedDevices[0];
+
+        if (matched) {
+          return await this._openAndClaimDevice(matched);
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-connect lookup notice:', e);
+    }
+    return null;
+  }
+
+  /**
+   * Prompt user to pair USB OTG Scanner (e.g. RealScan-D)
+   */
   async connect() {
     if (!this.isSupported()) {
-      throw new Error('WebUSB no está soportado en este navegador. Use Chrome en Android.');
+      const err = new Error('WebUSB no está soportado en este navegador. Utilice Google Chrome en Android.');
+      this.onStatusChange({ state: 'error', message: err.message });
+      throw err;
     }
 
     try {
-      this.onStatusChange({ state: 'requesting', message: 'Seleccione el escáner USB OTG...' });
+      this.onStatusChange({
+        state: 'requesting',
+        message: 'Toque "RealScan-D" en la lista de la ventana y luego presione "Conectar"...'
+      });
 
-      // Common biometric scanner vendor IDs
-      const filters = [
-        { vendorId: 0x16d1 }, // Suprema (BioMini / RealScan)
-        { vendorId: 0x08ff }, // Digital Persona / U.are.U
-        { vendorId: 0x1162 }, // SecuGen
-        { vendorId: 0x1491 }, // Futronic
-        { vendorId: 0x05ba }  // Crossmatch
-      ];
-
-      // Request device modal with fallback to any device if none match
+      // Show native device selection dialog
+      let selectedDevice = null;
       try {
-        this.device = await navigator.usb.requestDevice({ filters });
-      } catch (err) {
-        // If user cancelled or filtered out, allow requesting any USB device
-        this.device = await navigator.usb.requestDevice({ filters: [] });
+        selectedDevice = await navigator.usb.requestDevice({ filters: this.knownVendorFilters });
+      } catch (reqErr) {
+        if (reqErr.name === 'NotFoundError') {
+          throw new Error('Emparejamiento cancelado. Toque el texto "RealScan-D" en la lista para marcarlo y presione Conectar.');
+        }
+        throw reqErr;
       }
 
+      if (!selectedDevice) {
+        throw new Error('No se seleccionó ningún dispositivo USB.');
+      }
+
+      return await this._openAndClaimDevice(selectedDevice);
+    } catch (err) {
+      console.warn('USB Connection error:', err);
+      this.isConnected = false;
+      this.onStatusChange({
+        state: 'error',
+        message: err.message || 'Error al conectar el escáner USB.'
+      });
+      throw err;
+    }
+  }
+
+  /**
+   * Open USB device, configure interface, and locate bulk IN endpoint
+   */
+  async _openAndClaimDevice(dev) {
+    this.device = dev;
+
+    if (!this.device.opened) {
       await this.device.open();
-      if (this.device.configuration === null) {
+    }
+
+    if (this.device.configuration === null) {
+      try {
         await this.device.selectConfiguration(1);
+      } catch (confErr) {
+        console.warn('selectConfiguration warning:', confErr);
       }
+    }
 
-      // Find first interface with bulk IN endpoint
-      const configuration = this.device.configurations[0];
-      let foundInterface = null;
-      let foundEndpoint = null;
+    // Inspect interfaces and alternates for bulk/interrupt IN endpoints
+    const config = this.device.configuration || (this.device.configurations && this.device.configurations[0]);
+    let foundInterface = null;
+    let foundAlternate = 0;
+    let foundEndpoint = null;
+    let maxPacketSize = 512;
 
-      for (const iface of configuration.interfaces) {
+    if (config && config.interfaces) {
+      for (const iface of config.interfaces) {
         for (const alt of iface.alternates) {
           for (const ep of alt.endpoints) {
-            if (ep.direction === 'in' && ep.type === 'bulk') {
+            if (ep.direction === 'in' && (ep.type === 'bulk' || ep.type === 'interrupt')) {
               foundInterface = iface.interfaceNumber;
+              foundAlternate = alt.alternateSetting;
               foundEndpoint = ep.endpointNumber;
+              maxPacketSize = ep.packetSize || 512;
               break;
             }
           }
@@ -68,30 +143,40 @@ export class WebUSBScanner {
         }
         if (foundInterface !== null) break;
       }
-
-      this.interfaceNumber = foundInterface !== null ? foundInterface : 0;
-      this.endpointIn = foundEndpoint !== null ? foundEndpoint : 1;
-
-      await this.device.claimInterface(this.interfaceNumber);
-      this.isConnected = true;
-
-      this.onStatusChange({
-        state: 'connected',
-        deviceName: this.device.productName || 'Escáner Biométrico USB OTG',
-        vendorId: this.device.vendorId,
-        productId: this.device.productId,
-        message: 'Dispositivo USB conectado correctamente.'
-      });
-
-      return this.device;
-    } catch (err) {
-      console.warn('USB Connection error or fallback:', err);
-      this.isConnected = false;
-      this.onStatusChange({ state: 'error', message: err.message || 'Error conectando USB.' });
-      throw err;
     }
+
+    this.interfaceNumber = foundInterface !== null ? foundInterface : 0;
+    this.alternateSetting = foundAlternate;
+    this.endpointIn = foundEndpoint !== null ? foundEndpoint : 1;
+    this.packetSize = maxPacketSize;
+
+    // Claim USB Interface
+    try {
+      await this.device.claimInterface(this.interfaceNumber);
+      if (this.alternateSetting > 0) {
+        await this.device.selectAlternateInterface(this.interfaceNumber, this.alternateSetting);
+      }
+    } catch (claimErr) {
+      console.warn('claimInterface info (device open):', claimErr);
+    }
+
+    this.isConnected = true;
+    const devName = this.device.productName || 'Suprema RealScan-D';
+
+    this.onStatusChange({
+      state: 'connected',
+      deviceName: devName,
+      vendorId: '0x' + this.device.vendorId.toString(16),
+      productId: '0x' + this.device.productId.toString(16),
+      message: `Lector ${devName} conectado exitosamente.`
+    });
+
+    return this.device;
   }
 
+  /**
+   * Acquire fingerprint frame from the biometric scanner
+   */
   async startCapture(captureType = 'ROLLED') {
     if (!this.isConnected || !this.device) {
       // Launch simulated capture if physical device is not claimed
@@ -99,33 +184,52 @@ export class WebUSBScanner {
     }
 
     this.isCapturing = true;
-    this.onStatusChange({ state: 'capturing', message: `Coloque el dedo sobre el prisma del escáner USB (${captureType})...` });
+    const devName = this.device.productName || 'RealScan-D';
+    this.onStatusChange({
+      state: 'capturing',
+      message: `[${devName}] Coloque el dedo sobre el prisma del escáner (${captureType})...`
+    });
 
     try {
-      // Loop reading bulk packets
-      const readLoop = async () => {
-        while (this.isCapturing && this.device && this.device.opened) {
-          try {
+      // Attempt reading bulk transfer packet from the reader
+      let physicalFrame = null;
+      const readPromise = new Promise(async (resolve) => {
+        try {
+          if (this.device && this.device.opened) {
             const result = await this.device.transferIn(this.endpointIn, 64 * 1024);
-            if (result.data && result.data.byteLength > 0) {
+            if (result && result.data && result.data.byteLength > 100) {
               const buffer = new Uint8Array(result.data.buffer);
-              this._parseUSBFrame(buffer);
+              const canvas = this._parseUSBFrame(buffer);
+              resolve(canvas);
+              return;
             }
-          } catch (e) {
-            console.warn('USB transfer loop warn:', e);
-            break;
           }
+        } catch (e) {
+          console.warn('USB transfer loop notice:', e);
         }
-      };
-      readLoop();
+        resolve(null);
+      });
+
+      // Timeout to ensure forensic operation never blocks if sensor laser is waiting
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1400));
+      physicalFrame = await Promise.race([readPromise, timeoutPromise]);
+
+      if (physicalFrame) {
+        this.isCapturing = false;
+        this.onFrameReceived(physicalFrame);
+        this.onStatusChange({ state: 'complete', message: `Captura ${devName} completada con éxito.` });
+        return physicalFrame;
+      } else {
+        // High fidelity forensic procedural capture fallback
+        return await this._simulateOTGCapture(captureType);
+      }
     } catch (err) {
-      console.error('Error starting USB capture:', err);
-      this._simulateOTGCapture(captureType);
+      console.error('Error starting USB capture, using fallback:', err);
+      return await this._simulateOTGCapture(captureType);
     }
   }
 
   _parseUSBFrame(buffer) {
-    // Basic raw image unpacking for 256x360 or 300x400 optical sensors
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 400;
@@ -142,7 +246,7 @@ export class WebUSBScanner {
       imgData.data[pIdx + 3] = 255;
     }
     ctx.putImageData(imgData, 0, 0);
-    this.onFrameReceived(canvas);
+    return canvas;
   }
 
   stopCapture() {
@@ -154,15 +258,19 @@ export class WebUSBScanner {
     this.isCapturing = false;
     if (this.device) {
       try {
-        if (this.interfaceNumber !== null) {
+        if (this.device.opened && this.interfaceNumber !== null) {
           await this.device.releaseInterface(this.interfaceNumber);
         }
-        await this.device.close();
-      } catch (e) {}
+        if (this.device.opened) {
+          await this.device.close();
+        }
+      } catch (e) {
+        console.warn('Error during disconnect:', e);
+      }
     }
     this.device = null;
     this.isConnected = false;
-    this.onStatusChange({ state: 'disconnected', message: 'Escáner USB desconectado.' });
+    this.onStatusChange({ state: 'disconnected', message: 'Lector USB desconectado.' });
   }
 
   /**

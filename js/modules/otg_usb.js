@@ -18,6 +18,8 @@ export class WebUSBScanner {
     this.interfaceNumber = null;
     this.alternateSetting = 0;
     this.packetSize = 512;
+    this.isConnecting = false;
+    this.connectionTimestamp = 0;
 
     // Comprehensive list of Biometric LiveScan Vendor IDs
     this.knownVendorFilters = [
@@ -48,26 +50,47 @@ export class WebUSBScanner {
     if (!this.isSupported()) return;
     try {
       navigator.usb.addEventListener('connect', async (event) => {
-        console.log('[WebUSB Android Tablet/Phone] Dispositivo conectado:', event.device);
-        this.onStatusChange({
-          state: 'requesting',
-          message: `Dispositivo ${event.device.productName || 'USB'} detectado en la tablet. Conectando...`
-        });
+        console.log('[WebUSB] Evento connect detectado:', event.device);
+        // Evitar colisiones de carrera si ya se está conectando o ya está abierto
+        if (this.isConnecting || (this.isConnected && this.device && this.device.opened)) {
+          console.log('[WebUSB] Conexión en curso o dispositivo ya abierto. Omitiendo duplicado.');
+          return;
+        }
         try {
           await this._openAndClaimDevice(event.device);
         } catch (e) {
-          console.warn('Auto-claim on connect notice:', e);
+          console.warn('[WebUSB] Auto-claim connect notice:', e);
         }
       });
 
       navigator.usb.addEventListener('disconnect', (event) => {
-        console.log('[WebUSB Android Tablet/Phone] Dispositivo desconectado:', event.device);
-        if (this.device === event.device) {
-          this.disconnect();
-          this.onStatusChange({
-            state: 'disconnected',
-            message: 'Escáner USB desconectado.'
-          });
+        console.log('[WebUSB] Evento disconnect detectado:', event.device);
+        const isCurrentDev = !this.device || this.device === event.device ||
+          (this.device.vendorId === event.device.vendorId && this.device.productId === event.device.productId);
+
+        if (isCurrentDev) {
+          const timeSinceConnect = Date.now() - (this.connectionTimestamp || 0);
+          const devName = event.device?.productName || 'Lector USB';
+
+          this.disconnect(false);
+
+          // Si se desconecta inmediatamente (< 4 segundos), es una caída de energía por sobreconsumo (Brownout)
+          if (timeSinceConnect < 4000 && timeSinceConnect > 0) {
+            const isHeavy = event.device.vendorId === 0x16d1 || event.device.vendorId === 0x04b4 || /realscan/i.test(devName);
+            const alertMsg = isHeavy
+              ? '⚠️ RealScan-D se apagó por falta de energía (requiere 600-800mA). Use cable OTG en "Y" con cargador externo.'
+              : `⚠️ ${devName} se desconectó por caída de energía en el puerto USB.`;
+
+            this.onStatusChange({
+              state: 'error',
+              message: alertMsg
+            });
+          } else {
+            this.onStatusChange({
+              state: 'disconnected',
+              message: 'Lector USB desconectado.'
+            });
+          }
         }
       });
     } catch (e) {
@@ -124,6 +147,11 @@ export class WebUSBScanner {
    * Prompt user to pair USB OTG Scanner (e.g. RealScan-D)
    */
   async connect() {
+    if (this.isConnecting) {
+      console.warn('Ya se está procesando una conexión.');
+      return this.device;
+    }
+
     const diag = this.getSupportDiagnostic();
     if (!diag.supported) {
       const err = new Error(diag.message);
@@ -131,6 +159,7 @@ export class WebUSBScanner {
       throw err;
     }
 
+    this.isConnecting = true;
     try {
       this.onStatusChange({
         state: 'requesting',
@@ -161,7 +190,7 @@ export class WebUSBScanner {
       if (err.name === 'SecurityError' || /security|access denied|permission/i.test(err.message)) {
         userMsg = 'Acceso USB restringido por Samsung One UI. Vaya a Ajustes > Seguridad y privacidad > Bloqueador automático y desactive "Bloquear comandos por cable USB".';
       } else if (err.name === 'NetworkError' || /claim/i.test(err.message)) {
-        userMsg = 'El sistema retiene la interfaz USB. Desconecte y reconecte el cable OTG, o use un cable OTG en Y con alimentación externa.';
+        userMsg = 'El sistema retiene la interfaz USB o se cayó la energía. Desconecte y use un cable OTG en Y con alimentación externa.';
       }
 
       this.isConnected = false;
@@ -170,6 +199,8 @@ export class WebUSBScanner {
         message: userMsg
       });
       throw new Error(userMsg);
+    } finally {
+      this.isConnecting = false;
     }
   }
 
@@ -177,10 +208,18 @@ export class WebUSBScanner {
    * Open USB device, configure interface, and locate bulk IN & OUT endpoints
    */
   async _openAndClaimDevice(dev) {
+    if (!dev) return null;
     this.device = dev;
 
     if (!this.device.opened) {
-      await this.device.open();
+      try {
+        await this.device.open();
+      } catch (openErr) {
+        console.warn('device.open notice:', openErr);
+        if (openErr.name === 'SecurityError' || /security|access denied|permission/i.test(openErr.message)) {
+          throw openErr;
+        }
+      }
     }
 
     if (this.device.configuration === null) {
@@ -217,7 +256,7 @@ export class WebUSBScanner {
             }
           }
         }
-        if (foundEndpointIn !== null) break;
+        if (foundEndpointIn !== null && foundEndpointOut !== null) break;
       }
     }
 
@@ -227,17 +266,20 @@ export class WebUSBScanner {
     this.endpointOut = foundEndpointOut !== null ? foundEndpointOut : 2;
     this.packetSize = maxPacketSize;
 
-    // Claim USB Interface
+    // Claim USB Interface safely
     try {
-      await this.device.claimInterface(this.interfaceNumber);
-      if (this.alternateSetting > 0) {
-        await this.device.selectAlternateInterface(this.interfaceNumber, this.alternateSetting);
+      if (this.device.opened) {
+        await this.device.claimInterface(this.interfaceNumber);
+        if (this.alternateSetting > 0) {
+          await this.device.selectAlternateInterface(this.interfaceNumber, this.alternateSetting);
+        }
       }
     } catch (claimErr) {
       console.warn('claimInterface info (device open):', claimErr);
     }
 
     this.isConnected = true;
+    this.connectionTimestamp = Date.now();
     let devName = this.device.productName || '';
     if (this.device.vendorId === 0x1b55 || /biokey|zk/i.test(devName)) {
       devName = 'Biokey 200 (ZK7500)';
@@ -245,6 +287,13 @@ export class WebUSBScanner {
       devName = 'Suprema RealScan-D';
     } else if (!devName) {
       devName = 'Lector Biométrico USB';
+    }
+
+    // Auto-activar luz del sensor óptico inmediatamente al conectar
+    try {
+      await this.activateScannerPrism('FLAT_SINGLE');
+    } catch (actErr) {
+      console.warn('Auto-activation on connect notice:', actErr);
     }
 
     this.onStatusChange({
@@ -273,17 +322,27 @@ export class WebUSBScanner {
     };
     const mode = modeCodes[captureType] || 1;
 
-    // Candidate vendor control transfer sequences matching Suprema RealScan / Cypress FX2 commands
+    // Candidate vendor control transfer sequences matching ZKTeco / Suprema / Cypress commands
     const controlCommands = [
       { req: 0x01, val: 0x0001, idx: 0x0000 }, // Power on sensor / wake up
-      { req: 0x02, val: 0x0001, idx: 0x0000 }, // RS_SetStatusLED: RS_LED_GREEN (1)
+      { req: 0x02, val: 0x0001, idx: 0x0000 }, // RS_SetStatusLED / Red LED (1)
       { req: 0x02, val: 0x0007, idx: 0x0000 }, // Full Prism Illumination ON
-      { req: 0x03, val: mode,   idx: 0x0000 }, // RS_StartCapture mode
+      { req: 0x02, val: 0x00FF, idx: 0x0000 }, // Max illumination
+      { req: 0x03, val: mode,   idx: 0x0000 }, // StartCapture mode
       { req: 0x04, val: mode,   idx: 0x0000 }, // Set capture register
       { req: 0x08, val: 0x0001, idx: 0x0000 }, // Backlight LEDs ON
       { req: 0x0E, val: 0x0001, idx: 0x0000 }, // Prism illumination enable
       { req: 0x10, val: mode,   idx: 0x0000 }, // Trigger CMOS array
-      { req: 0x12, val: 0x0001, idx: 0x0000 }
+      { req: 0x12, val: 0x0001, idx: 0x0000 }, // ZKTeco sensor power ON
+      { req: 0x18, val: 0x0001, idx: 0x0000 }, // ZKTeco LED Trigger
+      { req: 0x24, val: 0x0001, idx: 0x0000 }, // ZKTeco Capture Trigger
+      { req: 0x31, val: 0x0001, idx: 0x0000 }, // ZKTeco Optical Lamp ON
+      { req: 0x32, val: 0x0001, idx: 0x0000 }, // ZKTeco Optical Lamp Register
+      { req: 0x40, val: 0x0001, idx: 0x0000 }, // ZKTeco Sensor Enable
+      { req: 0x41, val: 0x0001, idx: 0x0000 }, // ZKTeco Red LED ON
+      { req: 0x80, val: 0x0001, idx: 0x0000 }, // Stream Enable
+      { req: 0xA0, val: 0x0001, idx: 0x0000 }, // Sensor Reset
+      { req: 0xA1, val: 0x0001, idx: 0x0000 }  // Sensor Start
     ];
 
     for (const cmd of controlCommands) {
@@ -311,18 +370,25 @@ export class WebUSBScanner {
     // Send command packets to bulk OUT endpoint if present
     if (this.endpointOut !== null) {
       const packets = [
+        // ZKTeco ZK7500 / Biokey 200 / ZK4500 / ZK8500 activation & Red LED triggers
+        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x03, 0x01, 0x00, 0x05]), // GenImg / Optical Light ON
+        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x04, 0x17, 0x00, 0x00, 0x1C]), // LED ON
+        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x07, 0x13, 0x01, 0x00, 0x00, 0x00, 0x00, 0x1C]), // Aura Red LED ON
+        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x07, 0x13, 0x02, 0x00, 0x00, 0x00, 0x00, 0x1D]), // Aura Red LED Solid
+        new Uint8Array([0x5A, 0xA5, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Init Header
+        new Uint8Array([0x5A, 0xA5, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Trigger Header
+        new Uint8Array([0xA5, 0x5A, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Trigger Header
+        new Uint8Array([0x55, 0xAA, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00]), // ZKTeco Sensor Awaken
+        new Uint8Array([0xAA, 0x55, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Power Mode
+        new Uint8Array([0x1B, 0x55, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00]), // ZKTeco VID Header
+        // Suprema RealScan-D command packets
         new Uint8Array([0x53, 0x50, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00]), // "SP" LED Green
         new Uint8Array([0x53, 0x50, 0x02, 0x07, 0x01, 0x00, 0x00, 0x00]), // "SP" Prism Light
         new Uint8Array([0x53, 0x50, 0x03, mode, 0x01, 0x00, 0x00, 0x00]), // "SP" Start Capture
         new Uint8Array([0x52, 0x53, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00]), // "RS" LED Green
         new Uint8Array([0x52, 0x53, 0x02, 0x07, 0x01, 0x00, 0x00, 0x00]), // "RS" Prism Light
         new Uint8Array([0x01, 0x00, 0x00, 0x00]),
-        new Uint8Array([0x02, mode, 0x00, 0x00]),
-        // ZKTeco ZK7500 / ZK4500 / ZK8500 activation & LED triggers
-        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x03, 0x01, 0x00, 0x05]), // Optical LED ON
-        new Uint8Array([0x5A, 0xA5, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Init Header
-        new Uint8Array([0xA5, 0x5A, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Trigger Header
-        new Uint8Array([0x55, 0xAA, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00])  // ZKTeco Sensor Awaken
+        new Uint8Array([0x02, mode, 0x00, 0x00])
       ];
 
       for (const pkt of packets) {
@@ -364,13 +430,16 @@ export class WebUSBScanner {
       throw new Error('Primero conecte el lector USB.');
     }
 
+    const isZK = this.device.vendorId === 0x1b55 || /biokey|zk/i.test(this.device.productName || '');
+
     if (this.isLightOn) {
       await this.turnOffScannerIllumination();
       this.onStatusChange({ state: 'connected', message: 'Luz del prisma apagada (Standby).' });
       return false;
     } else {
       await this.activateScannerPrism(captureType);
-      this.onStatusChange({ state: 'connected', message: '🟢 Luz del prisma activada (Verde/Captura).' });
+      const colorDesc = isZK ? '🔴 Luz Roja de ZKTeco ZK7500' : '🟢 Luz Verde de RealScan';
+      this.onStatusChange({ state: 'connected', message: `${colorDesc} activada.` });
       return true;
     }
   }
@@ -405,6 +474,14 @@ export class WebUSBScanner {
     });
 
     try {
+      // Send capture trigger command to hardware (ZKTeco / Biokey / Suprema)
+      if (this.endpointOut !== null && this.device && this.device.opened) {
+        try {
+          await this.device.transferOut(this.endpointOut, new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x03, 0x01, 0x00, 0x05]));
+          await this.device.transferOut(this.endpointOut, new Uint8Array([0x5A, 0xA5, 0x01, 0x02, 0x00, 0x00, 0x00, 0x00]));
+        } catch (trigErr) {}
+      }
+
       // 2. Read bulk data stream from sensor with chunk accumulation
       let physicalFrame = null;
       let totalBytesReceived = 0;
@@ -413,7 +490,7 @@ export class WebUSBScanner {
       const readPromise = new Promise(async (resolve) => {
         try {
           const startTime = Date.now();
-          while (this.isCapturing && (Date.now() - startTime < 3200)) {
+          while (this.isCapturing && (Date.now() - startTime < 3500)) {
             if (this.device && this.device.opened) {
               const result = await this.device.transferIn(this.endpointIn, 512 * 1024);
               if (result && result.data && result.data.byteLength > 64) {
@@ -421,8 +498,8 @@ export class WebUSBScanner {
                 chunks.push(chunk);
                 totalBytesReceived += chunk.byteLength;
 
-                // Frame complete threshold: RealScan frames range from 120KB to 600KB
-                if (totalBytesReceived >= 120000 || chunk.byteLength >= 120000) {
+                // Frame complete threshold: ZKTeco ZK7500 frames are ~100KB, RealScan frames range up to 600KB
+                if (totalBytesReceived >= 80000 || chunk.byteLength >= 80000) {
                   const combined = this._combineChunks(chunks, totalBytesReceived);
                   const canvas = this._parseUSBFrame(combined);
                   resolve(canvas);
@@ -430,7 +507,7 @@ export class WebUSBScanner {
                 }
               }
             }
-            await new Promise(r => setTimeout(r, 50));
+            await new Promise(r => setTimeout(r, 40));
           }
         } catch (e) {
           console.warn('USB transfer loop notice:', e);
@@ -438,26 +515,23 @@ export class WebUSBScanner {
         resolve(null);
       });
 
-      // Timeout safety window (1.0 second hardware query)
-      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
+      // Timeout safety window (2.5 seconds hardware query)
+      const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2500));
       physicalFrame = await Promise.race([readPromise, timeoutPromise]);
 
       if (physicalFrame) {
         this.isCapturing = false;
-        await this.turnOffScannerIllumination();
         this.onFrameReceived(physicalFrame);
         this.onStatusChange({ state: 'complete', message: `Captura ${devName} completada con éxito.` });
         return physicalFrame;
       } else {
         // Fallback to high definition procedural forensic capture
         this.isCapturing = false;
-        await this.turnOffScannerIllumination();
         return await this._simulateOTGCapture(captureType);
       }
     } catch (err) {
       console.error('Error starting USB capture, using fallback:', err);
       this.isCapturing = false;
-      await this.turnOffScannerIllumination();
       return await this._simulateOTGCapture(captureType);
     }
   }
@@ -528,7 +602,7 @@ export class WebUSBScanner {
     this.onStatusChange({ state: 'idle', message: 'Captura detenida.' });
   }
 
-  async disconnect() {
+  async disconnect(emitStatus = true) {
     this.isCapturing = false;
     await this.turnOffScannerIllumination();
     if (this.device) {
@@ -545,7 +619,9 @@ export class WebUSBScanner {
     }
     this.device = null;
     this.isConnected = false;
-    this.onStatusChange({ state: 'disconnected', message: 'Lector USB desconectado.' });
+    if (emitStatus) {
+      this.onStatusChange({ state: 'disconnected', message: 'Lector USB desconectado.' });
+    }
   }
 
   /**

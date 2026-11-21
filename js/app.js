@@ -334,12 +334,16 @@ class LiveScanApp {
         try {
           const isNowOn = await this.usbScanner.togglePrismLight(this.currentCaptureType);
           this.dom.btnToggleUsbLight.classList.toggle('active', isNowOn);
-          if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = isNowOn ? '🟢' : '💡';
+          const dev = this.usbScanner.device;
+          const isZK = dev && (dev.vendorId === 0x1b55 || /biokey|zk/i.test(dev.productName || ''));
+          const lightColorIcon = isZK ? '🔴' : '🟢';
+          const lightLabel = isZK ? 'LUZ ROJA' : 'LUZ PRISMA';
+          if (this.dom.usbLightIcon) this.dom.usbLightIcon.textContent = isNowOn ? lightColorIcon : '💡';
           if (this.dom.usbLightLabel) {
-            this.dom.usbLightLabel.textContent = isNowOn ? 'APAGAR LUZ' : 'ACTIVAR LUZ PRISMA';
+            this.dom.usbLightLabel.textContent = isNowOn ? `APAGAR ${lightLabel}` : `ENCENDER ${lightLabel}`;
           }
           if (navigator.vibrate) navigator.vibrate(40);
-          this.showToast(isNowOn ? '🟢 Señal de luz enviada a RealScan-D.' : 'Luz apagada.');
+          this.showToast(isNowOn ? `${lightColorIcon} Señal enviada para encender sensor óptico.` : 'Luz apagada.');
         } catch (err) {
           this.showToast(err.message || 'Error al cambiar estado de luz USB.');
         }
@@ -349,8 +353,17 @@ class LiveScanApp {
     // Direct USB Forensic Capture Button
     if (this.dom.btnDirectUsbCapture) {
       this.dom.btnDirectUsbCapture.addEventListener('click', async () => {
-        this.showToast(`Iniciando toma pericial (${this.currentCaptureType})...`);
-        await this.usbScanner._simulateOTGCapture(this.currentCaptureType);
+        this.showToast(`Adquiriendo huella pericial (${this.currentCaptureType})...`);
+        try {
+          this.isCapturing = true;
+          this.updateCaptureButton(true);
+          await this.usbScanner.startCapture(this.currentCaptureType);
+        } catch (err) {
+          console.error('Direct capture error:', err);
+        } finally {
+          this.isCapturing = false;
+          this.updateCaptureButton(false);
+        }
       });
     }
 
@@ -667,6 +680,8 @@ class LiveScanApp {
           }
           await this.usbScanner.startCapture(this.currentCaptureType);
         } catch (e) {
+          console.error('USB capture error:', e);
+        } finally {
           this.isCapturing = false;
           this.updateCaptureButton(false);
         }
@@ -733,6 +748,10 @@ class LiveScanApp {
         }
         if (this.dom.usbActionsSecondary) {
           this.dom.usbActionsSecondary.style.display = 'flex';
+          const isZK = info.deviceName && /zk|biokey/i.test(info.deviceName);
+          if (this.dom.usbLightLabel) {
+            this.dom.usbLightLabel.textContent = isZK ? '🔴 ENCENDER LUZ ROJA' : '💡 ACTIVAR LUZ PRISMA';
+          }
         }
       } else if (info.state === 'disconnected' || info.state === 'error') {
         this.dom.btnConnectUsb?.classList.remove('connected');

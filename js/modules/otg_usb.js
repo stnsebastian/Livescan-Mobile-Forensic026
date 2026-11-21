@@ -21,6 +21,7 @@ export class WebUSBScanner {
 
     // Comprehensive list of Biometric LiveScan Vendor IDs
     this.knownVendorFilters = [
+      { vendorId: 0x1b55 }, // ZKTeco / ZKSoftware (ZK7500, ZK4500, ZK7000, ZK8500)
       { vendorId: 0x16d1 }, // Suprema Inc. (RealScan-D, BioMini, RealScan-G10, RealScan-F)
       { vendorId: 0x04b4 }, // Cypress Semiconductor (FX2/FX3 USB Controller inside RealScan-D)
       { vendorId: 0x08ff }, // DigitalPersona / AuthenTec / U.are.U

@@ -439,10 +439,10 @@
         <div class="modal-body">
           <div class="form-group">
             <label class="form-label">Dirección WebSocket del Bridge (PC Forense)</label>
-            <input type="text" id="inputBridgeUrl" class="form-input" placeholder="ws://192.168.1.100:8080/ws">
+            <input type="text" id="inputBridgeUrl" class="form-input" placeholder="ws://127.0.0.1:8080/ws">
           </div>
           <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
-            Inicie el script <code>pc_realscan_bridge.py</code> o <code>node pc_bridge.js</code> en la computadora donde está conectado el escáner Suprema RealScan G-10 o BioMini. Ambos dispositivos deben estar en la misma red Wi-Fi.
+            Inicie el script <code>iniciar_zk_bridge.bat</code> o <code>zk_bridge.py</code> en la PC donde está conectado el lector ZKTeco (ZK7500 / ZK4500) o Suprema RealScan. Use <code>ws://127.0.0.1:8080/ws</code> si la PWA corre en el mismo PC, o la IP local (ej. <code>ws://192.168.1.X:8080/ws</code>) desde una tablet/móvil Wi-Fi.
           </div>
           <div style="display: flex; gap: 8px; margin-top: 6px;">
             <button id="btnSaveBridgeUrl" class="btn-primary" style="flex: 1;">
@@ -526,6 +526,6 @@
   </script>
 
   <!-- App Entry Script (Version Cache-Busted) -->
-  <script type="module" src="js/app.js?v=3.4"></script>
+  <script type="module" src="js/app.js?v=3.5"></script>
 </body>
 </html>

@@ -623,9 +623,10 @@ class LiveScanApp {
     } else {
       this.showToast('Conectando lector USB...');
       try {
-        await this.usbScanner.connect();
+        const dev = await this.usbScanner.connect();
         if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
-        this.showToast('🟢 Lector RealScan-D conectado y sincronizado.');
+        const devTitle = dev?.productName || 'Biométrico';
+        this.showToast(`🟢 Lector ${devTitle} conectado y sincronizado.`);
       } catch (err) {
         if (err && err.message) {
           this.showToast(err.message, 4000);
@@ -723,7 +724,7 @@ class LiveScanApp {
         this.dom.btnConnectUsb?.classList.add('connected');
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '🟢';
         if (this.dom.usbConnectLabel) {
-          const devTitle = info.deviceName ? info.deviceName.toUpperCase() : 'REALSCAN-D';
+          const devTitle = info.deviceName ? info.deviceName.toUpperCase() : 'BIOMÉTRICO';
           this.dom.usbConnectLabel.textContent = `${devTitle} CONECTADO`;
         }
         if (this.dom.usbStatusBadge) {
@@ -737,7 +738,7 @@ class LiveScanApp {
         this.dom.btnConnectUsb?.classList.remove('connected');
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '🔌';
         if (this.dom.usbConnectLabel) {
-          this.dom.usbConnectLabel.textContent = 'CONECTAR LECTOR USB (REALSCAN-D)';
+          this.dom.usbConnectLabel.textContent = 'CONECTAR LECTOR USB';
         }
         if (this.dom.usbStatusBadge) {
           this.dom.usbStatusBadge.textContent = (info.state === 'error' ? 'Error' : 'Desconectado');
@@ -752,7 +753,7 @@ class LiveScanApp {
       } else if (info.state === 'requesting') {
         if (this.dom.usbConnectIcon) this.dom.usbConnectIcon.textContent = '⏳';
         if (this.dom.usbConnectLabel) {
-          this.dom.usbConnectLabel.textContent = 'SELECCIONE REALSCAN-D...';
+          this.dom.usbConnectLabel.textContent = 'SELECCIONE SU LECTOR USB...';
         }
         if (this.dom.usbStatusBadge) {
           this.dom.usbStatusBadge.textContent = 'Vinculando';

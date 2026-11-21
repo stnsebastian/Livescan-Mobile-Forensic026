@@ -238,7 +238,14 @@ export class WebUSBScanner {
     }
 
     this.isConnected = true;
-    const devName = this.device.productName || 'Suprema RealScan-D';
+    let devName = this.device.productName || '';
+    if (this.device.vendorId === 0x1b55 || /biokey|zk/i.test(devName)) {
+      devName = 'Biokey 200 (ZK7500)';
+    } else if (this.device.vendorId === 0x16d1 || /realscan/i.test(devName)) {
+      devName = 'Suprema RealScan-D';
+    } else if (!devName) {
+      devName = 'Lector Biométrico USB';
+    }
 
     this.onStatusChange({
       state: 'connected',
@@ -310,7 +317,12 @@ export class WebUSBScanner {
         new Uint8Array([0x52, 0x53, 0x02, 0x01, 0x01, 0x00, 0x00, 0x00]), // "RS" LED Green
         new Uint8Array([0x52, 0x53, 0x02, 0x07, 0x01, 0x00, 0x00, 0x00]), // "RS" Prism Light
         new Uint8Array([0x01, 0x00, 0x00, 0x00]),
-        new Uint8Array([0x02, mode, 0x00, 0x00])
+        new Uint8Array([0x02, mode, 0x00, 0x00]),
+        // ZKTeco ZK7500 / ZK4500 / ZK8500 activation & LED triggers
+        new Uint8Array([0xEF, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x01, 0x00, 0x03, 0x01, 0x00, 0x05]), // Optical LED ON
+        new Uint8Array([0x5A, 0xA5, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Init Header
+        new Uint8Array([0xA5, 0x5A, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00]), // ZKTeco Trigger Header
+        new Uint8Array([0x55, 0xAA, 0x00, 0x00, 0x20, 0x00, 0x00, 0x00])  // ZKTeco Sensor Awaken
       ];
 
       for (const pkt of packets) {
@@ -473,6 +485,10 @@ export class WebUSBScanner {
     } else if (buffer.length >= 500 * 500) {
       width = 500;
       height = 500;
+    } else if (buffer.length >= 280 * 360) {
+      // Standard ZKTeco ZK7500 / ZK4500 optical raw frame size
+      width = 280;
+      height = 360;
     }
 
     const canvas = document.createElement('canvas');

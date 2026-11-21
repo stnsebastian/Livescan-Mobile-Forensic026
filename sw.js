@@ -3,7 +3,7 @@
  * Compatible con Samsung Galaxy A06 / One UI / Android 14+ y navegadores modernos.
  */
 
-const CACHE_NAME = 'livescan-mobile-v3.9';
+const CACHE_NAME = 'livescan-mobile-v4.0';
 
 // Recursos críticos indispensables para arranque offline
 const CORE_ASSETS = [

@@ -360,6 +360,7 @@ class LiveScanApp {
           await this.usbScanner.startCapture(this.currentCaptureType);
         } catch (err) {
           console.error('Direct capture error:', err);
+          this.showToast(err.message || 'Error en la captura óptica.', 5000);
         } finally {
           this.isCapturing = false;
           this.updateCaptureButton(false);
@@ -681,6 +682,7 @@ class LiveScanApp {
           await this.usbScanner.startCapture(this.currentCaptureType);
         } catch (e) {
           console.error('USB capture error:', e);
+          this.showToast(e.message || 'Error al capturar huella USB.', 5000);
         } finally {
           this.isCapturing = false;
           this.updateCaptureButton(false);

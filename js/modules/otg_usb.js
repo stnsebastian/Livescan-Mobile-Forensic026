@@ -525,14 +525,17 @@ export class WebUSBScanner {
         this.onStatusChange({ state: 'complete', message: `Captura ${devName} completada con éxito.` });
         return physicalFrame;
       } else {
-        // Fallback to high definition procedural forensic capture
         this.isCapturing = false;
-        return await this._simulateOTGCapture(captureType);
+        const msg = `El lector ${devName} no transmitió imagen óptica. Requiere el SDK/driver propietario del fabricante.`;
+        this.onStatusChange({ state: 'error', message: msg });
+        throw new Error(msg);
       }
     } catch (err) {
-      console.error('Error starting USB capture, using fallback:', err);
+      console.error('Error starting USB capture:', err);
       this.isCapturing = false;
-      return await this._simulateOTGCapture(captureType);
+      const userErr = err.message || `No se pudo obtener imagen del lector ${devName}.`;
+      this.onStatusChange({ state: 'error', message: userErr });
+      throw new Error(userErr);
     }
   }
 
